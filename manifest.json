@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "1.1.0.0",
+        "changelog": "Personnalisation : italique, gras, soulignement, couleurs, positions et une ligne par réplique au choix, avec aperçu. Noms de pistes d'origine (FR Full [SRT]). Filtre de langues. Bouton pour régénérer les SRT avec les nouveaux réglages.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/ZombieEvil/jellyfin-plugin-ass-to-srt/releases/download/v1.1.0/ass-to-srt_1.1.0.0.zip",
+        "checksum": "3e61f1da8ac8e25cbe4b0e5f53c82b6e",
+        "timestamp": "2026-10-15T18:49:15Z"
+      },
+      {
         "version": "1.0.0.0",
         "changelog": "Première version : convertit automatiquement les sous-titres ASS/SSA en SRT.",
         "targetAbi": "12.0.0.0",
