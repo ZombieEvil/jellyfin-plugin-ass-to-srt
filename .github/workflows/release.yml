@@ -1,0 +1,105 @@
+# Publishing a GitHub release (tag "v1.2.3") builds the plugin, attaches the zip
+# to the release and adds the version to manifest.json, the repository URL users add in Jellyfin.
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  TARGET_ABI: "12.0.0.0"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Compute version
+        id: version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          parts=$(echo "$tag" | tr '.' '\n' | wc -l)
+          version="$tag"
+          while [ "$parts" -lt 4 ]; do version="$version.0"; parts=$((parts + 1)); done
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "zip=ass-to-srt_$version.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: >
+          dotnet build Jellyfin.Plugin.AssToSrt/Jellyfin.Plugin.AssToSrt.csproj -c Release
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:AssemblyVersion=${{ steps.version.outputs.version }}
+          -p:FileVersion=${{ steps.version.outputs.version }}
+
+      - name: Package
+        id: package
+        run: |
+          mkdir -p dist
+          zip -j "dist/${{ steps.version.outputs.zip }}" Jellyfin.Plugin.AssToSrt/bin/Release/net10.0/Jellyfin.Plugin.AssToSrt.dll
+          echo "md5=$(md5sum "dist/${{ steps.version.outputs.zip }}" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Attach zip to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" "dist/${{ steps.version.outputs.zip }}" --clobber
+
+      - name: Update manifest.json
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CHECKSUM: ${{ steps.package.outputs.md5 }}
+          SOURCE_URL: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ steps.version.outputs.zip }}
+          CHANGELOG: ${{ github.event.release.body }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, datetime
+
+          with open("manifest.json", encoding="utf-8") as f:
+              manifest = json.load(f)
+
+          guid = "5c2f7686-19c5-4ab1-b47a-6acdef57ccbd"
+          plugin = next((p for p in manifest if p["guid"] == guid), None)
+          if plugin is None:
+              plugin = {
+                  "guid": guid,
+                  "name": "ASS to SRT",
+                  "description": "Creates SRT copies of ASS/SSA subtitles so they play without transcoding on clients that cannot render ASS (Android TV, Fire TV, Roku...).",
+                  "overview": "Convert ASS/SSA subtitles to SRT",
+                  "owner": os.environ["OWNER"],
+                  "category": "General",
+                  "versions": [],
+              }
+              manifest.append(plugin)
+
+          plugin["versions"] = [v for v in plugin["versions"] if v["version"] != os.environ["VERSION"]]
+          plugin["versions"].insert(0, {
+              "version": os.environ["VERSION"],
+              "changelog": os.environ.get("CHANGELOG") or "See the GitHub release.",
+              "targetAbi": os.environ["TARGET_ABI"],
+              "sourceUrl": os.environ["SOURCE_URL"],
+              "checksum": os.environ["CHECKSUM"],
+              "timestamp": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+          })
+
+          with open("manifest.json", "w", encoding="utf-8") as f:
+              json.dump(manifest, f, indent=2, ensure_ascii=False)
+              f.write("\n")
+          EOF
+
+      - name: Commit manifest.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git commit -m "Add version ${{ steps.version.outputs.version }} to manifest.json"
+          git push
