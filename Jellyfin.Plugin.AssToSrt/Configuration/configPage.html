@@ -11,58 +11,72 @@
                 <form id="AssToSrtConfigForm">
                     <div class="verticalSection">
                         <h2 class="sectionTitle">ASS to SRT</h2>
-                        <p>Creates an SRT copy of ASS/SSA subtitles, next to the video, so that clients which cannot display ASS (Android TV, Fire TV, Roku...) play the video directly instead of asking the server to burn the subtitles in. The ASS tracks are kept: the SRT is only added.</p>
+                        <p data-t="intro"></p>
                     </div>
 
                     <div class="verticalSection">
-                        <h3 class="sectionTitle">Libraries</h3>
-                        <div class="fieldDescription">Leave everything unchecked to process every video library.</div>
-                        <div id="AssToSrtLibraries" class="checkboxList paperList" style="padding: .5em 1em;"></div>
+                        <h3 class="sectionTitle" data-t="librariesTitle"></h3>
+                        <div class="fieldDescription" data-t="librariesHelp"></div>
+                        <div id="AssToSrtLibraries" style="padding: .5em 0;"></div>
                     </div>
 
                     <div class="verticalSection">
-                        <h3 class="sectionTitle">Options</h3>
-
+                        <h3 class="sectionTitle" data-t="tracksTitle"></h3>
                         <div class="checkboxContainer checkboxContainer-withDescription">
-                            <label class="emby-checkbox-label">
-                                <input is="emby-checkbox" type="checkbox" id="AutoConvertNewItems" />
-                                <span>Convert new videos automatically</span>
-                            </label>
-                            <div class="fieldDescription checkboxFieldDescription">A video added to the library is converted about a minute after Jellyfin has analysed it. Otherwise the conversion only runs with the scheduled task (every night at 4:00).</div>
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="ConvertForcedTracks" /><span data-t="forced"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="forcedHelp"></div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="SkipSignsAndSongs" /><span data-t="signs"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="signsHelp"></div>
+                        </div>
+                        <div class="inputContainer">
+                            <input is="emby-input" type="text" id="Languages" data-tlabel="languages" />
+                            <div class="fieldDescription" data-t="languagesHelp"></div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle" data-t="styleTitle"></h3>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepItalic" class="assToSrtStyle" /><span data-t="italic"></span></label></div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepBold" class="assToSrtStyle" /><span data-t="bold"></span></label></div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepUnderline" class="assToSrtStyle" /><span data-t="underline"></span></label></div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepColors" class="assToSrtStyle" /><span data-t="colors"></span></label></div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepPositions" class="assToSrtStyle" /><span data-t="positions"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="positionsHelp"></div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="SingleLine" class="assToSrtStyle" /><span data-t="singleLine"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="singleLineHelp"></div>
                         </div>
 
-                        <div class="checkboxContainer checkboxContainer-withDescription">
-                            <label class="emby-checkbox-label">
-                                <input is="emby-checkbox" type="checkbox" id="ConvertForcedTracks" />
-                                <span>Convert forced tracks</span>
-                            </label>
-                            <div class="fieldDescription checkboxFieldDescription">Forced ASS tracks (only the foreign-language lines) become ".forced.srt" files.</div>
-                        </div>
+                        <div class="fieldDescription" style="margin-top: 1em;" data-t="previewTitle"></div>
+                        <div id="AssToSrtPreview" style="background: #000; color: #fff; text-align: center; padding: 1.2em 1em; margin: .5em 0 1em; border-radius: .3em; font-size: 1.15em; line-height: 1.5; text-shadow: 0 0 3px #000, 0 0 3px #000;"></div>
+                        <div class="fieldDescription" data-t="appearanceHelp"></div>
+                    </div>
 
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle" data-t="namingTitle"></h3>
                         <div class="checkboxContainer checkboxContainer-withDescription">
-                            <label class="emby-checkbox-label">
-                                <input is="emby-checkbox" type="checkbox" id="SkipSignsAndSongs" />
-                                <span>Skip "Signs / Songs" tracks</span>
-                            </label>
-                            <div class="fieldDescription checkboxFieldDescription">These tracks only translate on-screen signs and songs and rely on ASS positioning: they are rarely useful as SRT.</div>
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="UseTrackTitle" /><span data-t="trackTitle"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="trackTitleHelp"></div>
                         </div>
+                    </div>
 
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle" data-t="autoTitle"></h3>
                         <div class="checkboxContainer checkboxContainer-withDescription">
-                            <label class="emby-checkbox-label">
-                                <input is="emby-checkbox" type="checkbox" id="KeepBasicFormatting" />
-                                <span>Keep bold / italic</span>
-                            </label>
-                            <div class="fieldDescription checkboxFieldDescription">Colors, fonts and karaoke effects are always removed.</div>
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="AutoConvertNewItems" /><span data-t="auto"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="autoHelp"></div>
                         </div>
                     </div>
 
                     <div>
-                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
-                            <span>Save</span>
-                        </button>
-                        <button is="emby-button" type="button" id="AssToSrtRunNow" class="raised block emby-button">
-                            <span>Save and convert now</span>
-                        </button>
+                        <button is="emby-button" type="submit" class="raised button-submit block emby-button"><span data-t="save"></span></button>
+                        <button is="emby-button" type="button" id="AssToSrtRunNow" class="raised block emby-button"><span data-t="runNow"></span></button>
+                        <button is="emby-button" type="button" id="AssToSrtRegenerate" class="raised block emby-button"><span data-t="regenerate"></span></button>
+                        <div class="fieldDescription" data-t="regenerateHelp"></div>
                     </div>
                 </form>
             </div>
@@ -71,9 +85,98 @@
         <script type="text/javascript">
             (function () {
                 var pluginId = '5c2f7686-19c5-4ab1-b47a-6acdef57ccbd';
-                var options = ['AutoConvertNewItems', 'ConvertForcedTracks', 'SkipSignsAndSongs', 'KeepBasicFormatting'];
+                var checkboxes = ['AutoConvertNewItems', 'ConvertForcedTracks', 'SkipSignsAndSongs', 'UseTrackTitle',
+                    'KeepItalic', 'KeepBold', 'KeepUnderline', 'KeepColors', 'KeepPositions', 'SingleLine'];
                 var videoTypes = [undefined, null, 'movies', 'tvshows', 'homevideos', 'musicvideos', 'mixed'];
                 var page = document.querySelector('#AssToSrtConfigPage');
+
+                var texts = {
+                    en: {
+                        intro: 'Creates an SRT copy of ASS/SSA subtitles so that clients which cannot display ASS (Android TV, Fire TV, Roku...) play the video directly instead of asking the server to burn the subtitles in. The ASS tracks are kept: an SRT is only added.',
+                        librariesTitle: 'Libraries',
+                        librariesHelp: 'Leave everything unchecked to process every video library.',
+                        tracksTitle: 'Subtitles to convert',
+                        forced: 'Convert forced tracks',
+                        forcedHelp: 'Forced tracks only translate foreign-language lines and signs. They become ".forced.srt" files.',
+                        signs: 'Skip "Signs / Songs" tracks',
+                        signsHelp: 'These tracks only translate on-screen signs and songs and rely on ASS positioning: they are rarely useful as SRT.',
+                        languages: 'Languages to convert',
+                        languagesHelp: 'Comma separated, e.g. "fr, en". Leave empty to convert every language.',
+                        styleTitle: 'Appearance',
+                        italic: 'Keep italic',
+                        bold: 'Keep bold',
+                        underline: 'Keep underline',
+                        colors: 'Keep text colors',
+                        positions: 'Keep positions',
+                        positionsHelp: 'Lines placed at the top of the screen in the ASS (to avoid hiding on-screen text) stay at the top.',
+                        singleLine: 'One line per sentence',
+                        singleLineHelp: 'Joins the lines of a subtitle into a single line. Dialogue lines starting with a dash stay separate.',
+                        previewTitle: 'Preview (example subtitle):',
+                        appearanceHelp: 'Outline, shadow, font, size and background cannot be stored in an SRT file: every Jellyfin app applies its own. Change them in the subtitle settings of your app (TV: app settings > subtitles; web: user settings > Subtitles).',
+                        namingTitle: 'Track name',
+                        trackTitle: 'Use the original track name',
+                        trackTitleHelp: '"FR Full [ASS] - Crunchyroll" becomes "FR Full [SRT] - Crunchyroll" in the subtitle menu. Unchecked: only the language is shown. Jellyfin hides names containing "forced".',
+                        autoTitle: 'Automatic conversion',
+                        auto: 'Convert new videos automatically',
+                        autoHelp: 'A video added or refreshed is converted about a minute later. Otherwise the conversion only runs with the scheduled task (every night at 4:00) or the buttons below.',
+                        save: 'Save',
+                        runNow: 'Save and convert now',
+                        regenerate: 'Save and regenerate existing SRT',
+                        regenerateHelp: '"Regenerate" deletes the SRT files created by this plugin and creates them again with the settings above. SRT files you added yourself are never touched.',
+                        started: 'Started. Follow the progress in Dashboard > Scheduled Tasks.',
+                        failed: 'Could not start the task. Run it from Dashboard > Scheduled Tasks.',
+                        confirmRegenerate: 'Delete the SRT files created by ASS to SRT and create them again with these settings?',
+                        sample1: 'Live house Starry',
+                        sample2: 'I can\'t believe that we are',
+                        sample3: 'going to play on stage tonight...'
+                    },
+                    fr: {
+                        intro: 'Crée une copie SRT des sous-titres ASS/SSA pour que les applis qui ne savent pas afficher l\'ASS (Android TV, Fire TV, Roku...) lisent la vidéo directement, au lieu de demander au serveur d\'incruster les sous-titres. Les pistes ASS sont conservées : un SRT est seulement ajouté.',
+                        librariesTitle: 'Médiathèques',
+                        librariesHelp: 'Ne coche rien pour traiter toutes les médiathèques vidéo.',
+                        tracksTitle: 'Sous-titres à convertir',
+                        forced: 'Convertir les pistes forcées',
+                        forcedHelp: 'Les pistes forcées ne traduisent que les passages en langue étrangère et les panneaux. Elles deviennent des fichiers ".forced.srt".',
+                        signs: 'Ignorer les pistes « Signs / Songs »',
+                        signsHelp: 'Ces pistes ne traduisent que les panneaux et les chansons et dépendent du placement ASS : elles sont rarement utiles en SRT.',
+                        languages: 'Langues à convertir',
+                        languagesHelp: 'Séparées par des virgules, ex. "fr, en". Laisse vide pour convertir toutes les langues.',
+                        styleTitle: 'Apparence',
+                        italic: 'Garder l\'italique',
+                        bold: 'Garder le gras',
+                        underline: 'Garder le soulignement',
+                        colors: 'Garder les couleurs du texte',
+                        positions: 'Garder les positions',
+                        positionsHelp: 'Les répliques placées en haut de l\'écran dans l\'ASS (pour ne pas cacher un texte à l\'image) restent en haut.',
+                        singleLine: 'Une seule ligne par réplique',
+                        singleLineHelp: 'Met le texte d\'un sous-titre sur une seule ligne. Les répliques de dialogue qui commencent par un tiret restent séparées.',
+                        previewTitle: 'Aperçu (sous-titre d\'exemple) :',
+                        appearanceHelp: 'Le contour, l\'ombre, la police, la taille et le fond ne peuvent pas être enregistrés dans un fichier SRT : chaque appli Jellyfin applique les siens. Change-les dans les réglages de sous-titres de ton appli (TV : paramètres de l\'appli > sous-titres ; web : paramètres utilisateur > Sous-titres).',
+                        namingTitle: 'Nom des pistes',
+                        trackTitle: 'Garder le nom d\'origine de la piste',
+                        trackTitleHelp: '"FR Full [ASS] - Crunchyroll" devient "FR Full [SRT] - Crunchyroll" dans le menu des sous-titres. Décoché : seule la langue est affichée. Jellyfin masque les noms qui contiennent "forced".',
+                        autoTitle: 'Conversion automatique',
+                        auto: 'Convertir automatiquement les nouvelles vidéos',
+                        autoHelp: 'Une vidéo ajoutée ou actualisée est convertie environ une minute après. Sinon, la conversion se fait seulement avec la tâche planifiée (chaque nuit à 4 h) ou les boutons ci-dessous.',
+                        save: 'Enregistrer',
+                        runNow: 'Enregistrer et convertir maintenant',
+                        regenerate: 'Enregistrer et régénérer les SRT existants',
+                        regenerateHelp: '« Régénérer » supprime les SRT créés par ce plugin et les recrée avec les réglages ci-dessus. Les SRT que tu as ajoutés toi-même ne sont jamais touchés.',
+                        started: 'C\'est parti. Suis l\'avancement dans Tableau de bord > Tâches planifiées.',
+                        failed: 'Impossible de lancer la tâche. Lance-la depuis Tableau de bord > Tâches planifiées.',
+                        confirmRegenerate: 'Supprimer les SRT créés par ASS to SRT et les recréer avec ces réglages ?',
+                        sample1: 'Live house Starry',
+                        sample2: 'J\'arrive pas à croire qu\'on va',
+                        sample3: 'jouer sur scène ce soir...'
+                    }
+                };
+                var lang = ((document.documentElement.lang || navigator.language || 'en').toLowerCase().indexOf('fr') === 0) ? 'fr' : 'en';
+                var t = texts[lang];
+
+                function translate() {
+                    page.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t[el.getAttribute('data-t')]; });
+                    page.querySelectorAll('[data-tlabel]').forEach(function (el) { el.setAttribute('label', t[el.getAttribute('data-tlabel')]); });
+                }
 
                 function escapeHtml(text) {
                     var div = document.createElement('div');
@@ -81,21 +184,38 @@
                     return div.innerHTML;
                 }
 
+                // Mirrors what the plugin keeps, on a typical anime subtitle.
+                function renderPreview() {
+                    var o = function (id) { return page.querySelector('#' + id).checked; };
+                    var line1 = escapeHtml(t.sample2);
+                    var line2 = escapeHtml(t.sample3);
+                    if (o('KeepColors')) { line1 = '<span style="color:#ffd84d">' + line1 + '</span>'; }
+                    if (o('KeepUnderline')) { line2 = '<u>' + line2 + '</u>'; }
+                    var text = line1 + (o('SingleLine') ? ' ' : '<br>') + line2;
+                    var sign = escapeHtml(t.sample1.toUpperCase());
+                    if (o('KeepItalic')) { text = '<i>' + text + '</i>'; }
+                    if (o('KeepBold')) { text = '<b>' + text + '</b>'; sign = '<b>' + sign + '</b>'; }
+                    var top = o('KeepPositions')
+                        ? '<div style="margin-bottom:1.5em;opacity:.85">' + sign + ' <small>(' + (lang === 'fr' ? 'en haut' : 'top') + ')</small></div>'
+                        : '';
+                    page.querySelector('#AssToSrtPreview').innerHTML = top + '<div>' + text + '</div>';
+                }
+
                 function renderLibraries(folders, selected) {
-                    var html = folders
+                    page.querySelector('#AssToSrtLibraries').innerHTML = folders
                         .filter(function (f) { return videoTypes.indexOf(f.CollectionType) !== -1; })
                         .map(function (f) {
                             var checked = selected.indexOf(f.ItemId) !== -1 ? ' checked' : '';
-                            return '<label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" class="assToSrtLibrary" data-id="'
-                                + f.ItemId + '"' + checked + ' /><span>' + escapeHtml(f.Name) + '</span></label>';
+                            return '<div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" class="assToSrtLibrary" data-id="'
+                                + f.ItemId + '"' + checked + ' /><span>' + escapeHtml(f.Name) + '</span></label></div>';
                         }).join('');
-                    page.querySelector('#AssToSrtLibraries').innerHTML = html;
                 }
 
                 function save() {
                     Dashboard.showLoadingMsg();
                     return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                        options.forEach(function (o) { config[o] = page.querySelector('#' + o).checked; });
+                        checkboxes.forEach(function (id) { config[id] = page.querySelector('#' + id).checked; });
+                        config.Languages = page.querySelector('#Languages').value.trim();
                         config.LibraryIds = Array.prototype.map.call(
                             page.querySelectorAll('.assToSrtLibrary:checked'),
                             function (el) { return el.getAttribute('data-id'); });
@@ -103,15 +223,37 @@
                     });
                 }
 
+                function runTask(key) {
+                    return save().then(function () {
+                        return ApiClient.getJSON(ApiClient.getUrl('ScheduledTasks', { isHidden: false }));
+                    }).then(function (tasks) {
+                        var task = tasks.filter(function (x) { return x.Key === key; })[0];
+                        if (!task) { throw new Error('task not found'); }
+                        return ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('ScheduledTasks/Running/' + task.Id) });
+                    }).then(function () {
+                        Dashboard.hideLoadingMsg();
+                        Dashboard.alert(t.started);
+                    }).catch(function () {
+                        Dashboard.hideLoadingMsg();
+                        Dashboard.alert(t.failed);
+                    });
+                }
+
+                translate();
+
                 page.addEventListener('pageshow', function () {
                     Dashboard.showLoadingMsg();
                     Promise.all([ApiClient.getPluginConfiguration(pluginId), ApiClient.getVirtualFolders()]).then(function (results) {
                         var config = results[0];
-                        options.forEach(function (o) { page.querySelector('#' + o).checked = !!config[o]; });
+                        checkboxes.forEach(function (id) { page.querySelector('#' + id).checked = !!config[id]; });
+                        page.querySelector('#Languages').value = config.Languages || '';
                         renderLibraries(results[1], config.LibraryIds || []);
+                        renderPreview();
                         Dashboard.hideLoadingMsg();
                     });
                 });
+
+                page.querySelectorAll('.assToSrtStyle').forEach(function (el) { el.addEventListener('change', renderPreview); });
 
                 page.querySelector('#AssToSrtConfigForm').addEventListener('submit', function (e) {
                     e.preventDefault();
@@ -119,22 +261,10 @@
                     return false;
                 });
 
-                page.querySelector('#AssToSrtRunNow').addEventListener('click', function () {
-                    save().then(function () {
-                        return ApiClient.getJSON(ApiClient.getUrl('ScheduledTasks', { isHidden: false }));
-                    }).then(function (tasks) {
-                        var task = tasks.filter(function (t) { return t.Key === 'AssToSrtConvert'; })[0];
-                        if (!task) {
-                            throw new Error('task not found');
-                        }
-                        return ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('ScheduledTasks/Running/' + task.Id) });
-                    }).then(function () {
-                        Dashboard.hideLoadingMsg();
-                        Dashboard.alert('Conversion started. Follow it in Dashboard > Scheduled Tasks.');
-                    }).catch(function () {
-                        Dashboard.hideLoadingMsg();
-                        Dashboard.alert('Could not start the conversion. Run "Convert ASS subtitles to SRT" from Dashboard > Scheduled Tasks.');
-                    });
+                page.querySelector('#AssToSrtRunNow').addEventListener('click', function () { runTask('AssToSrtConvert'); });
+
+                page.querySelector('#AssToSrtRegenerate').addEventListener('click', function () {
+                    if (window.confirm(t.confirmRegenerate)) { runTask('AssToSrtRegenerate'); }
                 });
             })();
         </script>

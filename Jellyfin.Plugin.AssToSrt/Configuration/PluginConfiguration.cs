@@ -29,7 +29,42 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool SkipSignsAndSongs { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets a value indicating whether bold / italic / underline tags are kept in the SRT.
+    /// Gets or sets the languages to convert, comma separated (e.g. "fr, en"). Empty means every language.
     /// </summary>
-    public bool KeepBasicFormatting { get; set; } = true;
+    public string Languages { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the SRT is named after the original track ("FR Full [ASS]" becomes "FR Full [SRT]").
+    /// </summary>
+    public bool UseTrackTitle { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether italic is kept.
+    /// </summary>
+    public bool KeepItalic { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether bold is kept.
+    /// </summary>
+    public bool KeepBold { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether underline is kept.
+    /// </summary>
+    public bool KeepUnderline { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether text colors are kept.
+    /// </summary>
+    public bool KeepColors { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether positions (top of the screen...) are kept.
+    /// </summary>
+    public bool KeepPositions { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether each line of dialogue is put on a single line.
+    /// </summary>
+    public bool SingleLine { get; set; }
 }
