@@ -1,0 +1,55 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using Jellyfin.Plugin.AssToSrt.Configuration;
+using MediaBrowser.Common.Configuration;
+using MediaBrowser.Common.Plugins;
+using MediaBrowser.Model.Plugins;
+using MediaBrowser.Model.Serialization;
+
+namespace Jellyfin.Plugin.AssToSrt;
+
+/// <summary>
+/// ASS to SRT plugin: creates SRT copies of ASS/SSA subtitles so that clients
+/// which cannot render ASS (Android TV, Fire TV, Roku...) play without burn-in transcoding.
+/// </summary>
+public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Plugin"/> class.
+    /// </summary>
+    /// <param name="applicationPaths">Application paths.</param>
+    /// <param name="xmlSerializer">XML serializer.</param>
+    public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+        : base(applicationPaths, xmlSerializer)
+    {
+        Instance = this;
+    }
+
+    /// <inheritdoc />
+    public override string Name => "ASS to SRT";
+
+    /// <inheritdoc />
+    public override Guid Id => Guid.Parse("5c2f7686-19c5-4ab1-b47a-6acdef57ccbd");
+
+    /// <inheritdoc />
+    public override string Description => "Creates SRT copies of ASS/SSA subtitles so they play without transcoding on clients that cannot render ASS.";
+
+    /// <summary>
+    /// Gets the current plugin instance.
+    /// </summary>
+    public static Plugin? Instance { get; private set; }
+
+    /// <inheritdoc />
+    public IEnumerable<PluginPageInfo> GetPages()
+    {
+        return new[]
+        {
+            new PluginPageInfo
+            {
+                Name = Name,
+                EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace)
+            }
+        };
+    }
+}
