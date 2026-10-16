@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "1.1.1.0",
+        "changelog": "Correctif : le bouton Régénérer ne touche plus qu'aux médiathèques cochées. Ajout d'un encadré en haut des réglages qui montre le résultat de la dernière conversion.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/ZombieEvil/jellyfin-plugin-ass-to-srt/releases/download/v1.1.1/ass-to-srt_1.1.1.0.zip",
+        "checksum": "a305544970015c9d7fee9231a67d79a6",
+        "timestamp": "2026-10-16T22:47:16Z"
+      },
+      {
         "version": "1.1.0.0",
         "changelog": "Personnalisation : italique, gras, soulignement, couleurs, positions et une ligne par réplique au choix, avec aperçu. Noms de pistes d'origine (FR Full [SRT]). Filtre de langues. Bouton pour régénérer les SRT avec les nouveaux réglages.",
         "targetAbi": "12.0.0.0",
