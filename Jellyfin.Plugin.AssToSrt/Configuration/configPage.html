@@ -12,6 +12,7 @@
                     <div class="verticalSection">
                         <h2 class="sectionTitle">ASS to SRT</h2>
                         <p data-t="intro"></p>
+                        <div id="AssToSrtLastRun" style="padding: .8em 1em; border-left: 4px solid #00a4dc; background: rgba(255,255,255,.05); border-radius: .2em;"></div>
                     </div>
 
                     <div class="verticalSection">
@@ -94,7 +95,10 @@
                     en: {
                         intro: 'Creates an SRT copy of ASS/SSA subtitles so that clients which cannot display ASS (Android TV, Fire TV, Roku...) play the video directly instead of asking the server to burn the subtitles in. The ASS tracks are kept: an SRT is only added.',
                         librariesTitle: 'Libraries',
-                        librariesHelp: 'Leave everything unchecked to process every video library.',
+                        librariesHelp: 'Check the libraries that contain videos with ASS subtitles (usually your anime). Leave everything unchecked to process every video library.',
+                        lastRun: 'Last full conversion: {date} — libraries: {libraries} — {checked} videos checked, {converted} converted ({created} SRT files), {errors} errors.',
+                        lastRunNever: 'No full conversion yet: click "Save and convert now" or wait for the nightly task (4:00).',
+                        lastRunNoLibrary: 'none',
                         tracksTitle: 'Subtitles to convert',
                         forced: 'Convert forced tracks',
                         forcedHelp: 'Forced tracks only translate foreign-language lines and signs. They become ".forced.srt" files.',
@@ -122,7 +126,7 @@
                         save: 'Save',
                         runNow: 'Save and convert now',
                         regenerate: 'Save and regenerate existing SRT',
-                        regenerateHelp: '"Regenerate" deletes the SRT files created by this plugin and creates them again with the settings above. SRT files you added yourself are never touched.',
+                        regenerateHelp: '"Regenerate" deletes the SRT files created by this plugin in the checked libraries and creates them again with the settings above. SRT files you added yourself are never touched.',
                         started: 'Started. Follow the progress in Dashboard > Scheduled Tasks.',
                         failed: 'Could not start the task. Run it from Dashboard > Scheduled Tasks.',
                         confirmRegenerate: 'Delete the SRT files created by ASS to SRT and create them again with these settings?',
@@ -133,7 +137,10 @@
                     fr: {
                         intro: 'Crée une copie SRT des sous-titres ASS/SSA pour que les applis qui ne savent pas afficher l\'ASS (Android TV, Fire TV, Roku...) lisent la vidéo directement, au lieu de demander au serveur d\'incruster les sous-titres. Les pistes ASS sont conservées : un SRT est seulement ajouté.',
                         librariesTitle: 'Médiathèques',
-                        librariesHelp: 'Ne coche rien pour traiter toutes les médiathèques vidéo.',
+                        librariesHelp: 'Coche les médiathèques qui contiennent des vidéos avec des sous-titres ASS (en général tes animes). Ne coche rien pour traiter toutes les médiathèques vidéo.',
+                        lastRun: 'Dernière conversion complète : {date} — médiathèques : {libraries} — {checked} vidéos vérifiées, {converted} converties ({created} fichiers SRT), {errors} erreurs.',
+                        lastRunNever: 'Aucune conversion complète pour l\'instant : clique sur « Enregistrer et convertir maintenant » ou attends la tâche de la nuit (4 h).',
+                        lastRunNoLibrary: 'aucune',
                         tracksTitle: 'Sous-titres à convertir',
                         forced: 'Convertir les pistes forcées',
                         forcedHelp: 'Les pistes forcées ne traduisent que les passages en langue étrangère et les panneaux. Elles deviennent des fichiers ".forced.srt".',
@@ -161,7 +168,7 @@
                         save: 'Enregistrer',
                         runNow: 'Enregistrer et convertir maintenant',
                         regenerate: 'Enregistrer et régénérer les SRT existants',
-                        regenerateHelp: '« Régénérer » supprime les SRT créés par ce plugin et les recrée avec les réglages ci-dessus. Les SRT que tu as ajoutés toi-même ne sont jamais touchés.',
+                        regenerateHelp: '« Régénérer » supprime les SRT créés par ce plugin dans les médiathèques cochées et les recrée avec les réglages ci-dessus. Les SRT que tu as ajoutés toi-même ne sont jamais touchés.',
                         started: 'C\'est parti. Suis l\'avancement dans Tableau de bord > Tâches planifiées.',
                         failed: 'Impossible de lancer la tâche. Lance-la depuis Tableau de bord > Tâches planifiées.',
                         confirmRegenerate: 'Supprimer les SRT créés par ASS to SRT et les recréer avec ces réglages ?',
@@ -199,6 +206,24 @@
                         ? '<div style="margin-bottom:1.5em;opacity:.85">' + sign + ' <small>(' + (lang === 'fr' ? 'en haut' : 'top') + ')</small></div>'
                         : '';
                     page.querySelector('#AssToSrtPreview').innerHTML = top + '<div>' + text + '</div>';
+                }
+
+                function renderLastRun(config) {
+                    var el = page.querySelector('#AssToSrtLastRun');
+                    if (!config.LastRunUtc) {
+                        el.textContent = t.lastRunNever;
+                        return;
+                    }
+
+                    var values = {
+                        date: new Date(config.LastRunUtc).toLocaleString(lang === 'fr' ? 'fr-FR' : undefined),
+                        libraries: config.LastRunLibraries || t.lastRunNoLibrary,
+                        checked: config.LastRunChecked,
+                        converted: config.LastRunConverted,
+                        created: config.LastRunCreated,
+                        errors: config.LastRunErrors
+                    };
+                    el.textContent = t.lastRun.replace(/\{(\w+)\}/g, function (m, key) { return values[key]; });
                 }
 
                 function renderLibraries(folders, selected) {
@@ -248,6 +273,7 @@
                         checkboxes.forEach(function (id) { page.querySelector('#' + id).checked = !!config[id]; });
                         page.querySelector('#Languages').value = config.Languages || '';
                         renderLibraries(results[1], config.LibraryIds || []);
+                        renderLastRun(config);
                         renderPreview();
                         Dashboard.hideLoadingMsg();
                     });

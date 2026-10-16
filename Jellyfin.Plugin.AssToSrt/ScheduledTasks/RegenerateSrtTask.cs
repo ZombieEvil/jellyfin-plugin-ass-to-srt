@@ -30,7 +30,7 @@ public class RegenerateSrtTask : IScheduledTask
     public string Key => "AssToSrtRegenerate";
 
     /// <inheritdoc />
-    public string Description => "Deletes the SRT files created by ASS to SRT and creates them again with the current settings. SRT files you added yourself are never touched.";
+    public string Description => "Deletes the SRT files created by ASS to SRT in the selected libraries and creates them again with the current settings. SRT files you added yourself are never touched.";
 
     /// <inheritdoc />
     public string Category => "ASS to SRT";

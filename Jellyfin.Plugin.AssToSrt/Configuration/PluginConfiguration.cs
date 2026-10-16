@@ -67,4 +67,34 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets a value indicating whether each line of dialogue is put on a single line.
     /// </summary>
     public bool SingleLine { get; set; }
+
+    /// <summary>
+    /// Gets or sets the end of the last full conversion (ISO 8601, UTC), shown in the settings page.
+    /// </summary>
+    public string LastRunUtc { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the libraries processed by the last full conversion.
+    /// </summary>
+    public string LastRunLibraries { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the number of videos checked by the last full conversion.
+    /// </summary>
+    public int LastRunChecked { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of videos that received SRT files during the last full conversion.
+    /// </summary>
+    public int LastRunConverted { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of SRT files created by the last full conversion.
+    /// </summary>
+    public int LastRunCreated { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of errors of the last full conversion.
+    /// </summary>
+    public int LastRunErrors { get; set; }
 }

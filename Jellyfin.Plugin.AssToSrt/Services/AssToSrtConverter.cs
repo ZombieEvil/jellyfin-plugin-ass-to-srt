@@ -118,12 +118,13 @@ public sealed partial class AssToSrtConverter : IDisposable
     /// </summary>
     /// <param name="progress">Progress.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <param name="deletedPaths">SRT files deleted just before, whose videos must be refreshed even if nothing is recreated.</param>
+    /// <param name="deletedItems">Videos whose SRT were deleted just before: refreshed even if nothing is recreated.</param>
     /// <returns>A task.</returns>
-    public async Task ConvertAllAsync(IProgress<double> progress, CancellationToken cancellationToken, IReadOnlySet<string>? deletedPaths = null)
+    public async Task ConvertAllAsync(IProgress<double> progress, CancellationToken cancellationToken, IReadOnlySet<Guid>? deletedItems = null)
     {
         var items = GetCandidateItems();
         var created = 0;
+        var convertedVideos = 0;
         var failed = 0;
 
         for (var i = 0; i < items.Count; i++)
@@ -133,12 +134,13 @@ public sealed partial class AssToSrtConverter : IDisposable
             {
                 var count = await ProcessItemAsync(items[i], cancellationToken).ConfigureAwait(false);
                 created += count;
-
-                // Otherwise Jellyfin would keep listing the deleted SRT until the next library scan.
-                if (count == 0
-                    && deletedPaths is { Count: > 0 }
-                    && _mediaSourceManager.GetMediaStreams(items[i].Id).Any(s => s.IsExternal && s.Path is not null && deletedPaths.Contains(s.Path)))
+                if (count > 0)
                 {
+                    convertedVideos++;
+                }
+                else if (deletedItems is not null && deletedItems.Contains(items[i].Id))
+                {
+                    // Otherwise Jellyfin would keep listing the deleted SRT until the next library scan.
                     QueueRefresh(items[i]);
                 }
             }
@@ -152,26 +154,48 @@ public sealed partial class AssToSrtConverter : IDisposable
         }
 
         _logger.LogInformation("ASS to SRT: {Count} videos checked, {Created} SRT created, {Failed} errors", items.Count, created, failed);
+        SaveLastRun(items.Count, convertedVideos, created, failed);
     }
 
     /// <summary>
-    /// Deletes the SRT files previously written by the plugin, so that the next conversion applies the current settings.
+    /// Deletes the SRT files previously written by the plugin for the selected libraries,
+    /// so that the next conversion applies the current settings.
     /// </summary>
-    /// <returns>The deleted files.</returns>
-    public async Task<IReadOnlySet<string>> DeleteCreatedSubtitlesAsync()
+    /// <returns>The videos whose SRT files were deleted.</returns>
+    public async Task<IReadOnlySet<Guid>> DeleteCreatedSubtitlesAsync()
     {
         await _lock.WaitAsync().ConfigureAwait(false);
         try
         {
-            var deleted = new HashSet<string>();
-            foreach (var path in LoadRegistry())
+            var locations = GetLibraryLocations();
+            var registry = LoadRegistry();
+            var deletedItems = new HashSet<Guid>();
+            var deleted = 0;
+
+            foreach (var (path, itemId) in registry.ToList())
             {
+                var id = ResolveItemId(path, itemId);
+                var video = id == Guid.Empty ? null : _libraryManager.GetItemById(id) as Video;
+
+                // Never touch the SRT of a library that is not selected: they would not be recreated.
+                var handled = video is not null ? IsInLibraries(video, locations) : locations.Any(l => path.StartsWith(l, StringComparison.OrdinalIgnoreCase));
+                if (!handled)
+                {
+                    continue;
+                }
+
                 try
                 {
                     if (File.Exists(path))
                     {
                         File.Delete(path);
-                        deleted.Add(path);
+                        deleted++;
+                    }
+
+                    registry.Remove(path);
+                    if (video is not null)
+                    {
+                        deletedItems.Add(video.Id);
                     }
                 }
                 catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
@@ -180,9 +204,9 @@ public sealed partial class AssToSrtConverter : IDisposable
                 }
             }
 
-            SaveRegistry(new HashSet<string>());
-            _logger.LogInformation("ASS to SRT: {Count} previously created SRT files deleted", deleted.Count);
-            return deleted;
+            SaveRegistry(registry);
+            _logger.LogInformation("ASS to SRT: {Count} previously created SRT files deleted", deleted);
+            return deletedItems;
         }
         finally
         {
@@ -229,7 +253,11 @@ public sealed partial class AssToSrtConverter : IDisposable
             if (created.Count > 0)
             {
                 var registry = LoadRegistry();
-                registry.UnionWith(created);
+                foreach (var path in created)
+                {
+                    registry[path] = video.Id.ToString("N", CultureInfo.InvariantCulture);
+                }
+
                 SaveRegistry(registry);
                 QueueRefresh(video);
             }
@@ -470,13 +498,21 @@ public sealed partial class AssToSrtConverter : IDisposable
         }
     }
 
-    private HashSet<string> LoadRegistry()
+    // SRT path -> id of the video it belongs to ("" for files listed by version 1.1.0).
+    private Dictionary<string, string> LoadRegistry()
     {
         try
         {
             if (File.Exists(RegistryPath))
             {
-                return JsonSerializer.Deserialize<HashSet<string>>(File.ReadAllText(RegistryPath)) ?? new HashSet<string>();
+                var json = File.ReadAllText(RegistryPath);
+                if (json.TrimStart().StartsWith('['))
+                {
+                    var paths = JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+                    return paths.ToDictionary(p => p, _ => string.Empty);
+                }
+
+                return JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new Dictionary<string, string>();
             }
         }
         catch (Exception ex) when (ex is IOException or JsonException)
@@ -484,20 +520,50 @@ public sealed partial class AssToSrtConverter : IDisposable
             _logger.LogWarning(ex, "ASS to SRT: cannot read {Path}", RegistryPath);
         }
 
-        return new HashSet<string>();
+        return new Dictionary<string, string>();
     }
 
-    private void SaveRegistry(HashSet<string> registry)
+    private void SaveRegistry(Dictionary<string, string> registry)
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(RegistryPath)!);
-            File.WriteAllText(RegistryPath, JsonSerializer.Serialize(registry.OrderBy(p => p, StringComparer.Ordinal)));
+            File.WriteAllText(RegistryPath, JsonSerializer.Serialize(registry));
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
             _logger.LogWarning(ex, "ASS to SRT: cannot write {Path}", RegistryPath);
         }
+    }
+
+    // Files listed without their video id: a file in Jellyfin's metadata folder sits in a folder named after the item id.
+    private static Guid ResolveItemId(string path, string itemId)
+    {
+        if (Guid.TryParse(itemId, out var id))
+        {
+            return id;
+        }
+
+        var folder = Path.GetFileName(Path.GetDirectoryName(path));
+        return folder is { Length: 32 } && Guid.TryParseExact(folder, "N", out id) ? id : Guid.Empty;
+    }
+
+    private void SaveLastRun(int checkedVideos, int convertedVideos, int created, int failed)
+    {
+        var plugin = Plugin.Instance;
+        if (plugin is null)
+        {
+            return;
+        }
+
+        var config = plugin.Configuration;
+        config.LastRunUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+        config.LastRunLibraries = string.Join(", ", GetSelectedLibraries().Select(f => f.Name));
+        config.LastRunChecked = checkedVideos;
+        config.LastRunConverted = convertedVideos;
+        config.LastRunCreated = created;
+        config.LastRunErrors = failed;
+        plugin.SaveConfiguration();
     }
 
     private async Task<(int ExitCode, string Error)> RunFfmpegAsync(IEnumerable<string> args, CancellationToken cancellationToken)
@@ -547,7 +613,7 @@ public sealed partial class AssToSrtConverter : IDisposable
         return (process.ExitCode, (await stderr.ConfigureAwait(false)).Trim());
     }
 
-    private List<string> GetLibraryLocations()
+    private List<MediaBrowser.Model.Entities.VirtualFolderInfo> GetSelectedLibraries()
     {
         var selected = Config.LibraryIds
             .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
@@ -558,10 +624,14 @@ public sealed partial class AssToSrtConverter : IDisposable
             .Where(f => selected.Count == 0
                 ? f.CollectionType is null || VideoCollectionTypes.Contains(f.CollectionType.ToString()!.ToLowerInvariant())
                 : Guid.TryParse(f.ItemId, out var id) && selected.Contains(id))
+            .ToList();
+    }
+
+    private List<string> GetLibraryLocations()
+        => GetSelectedLibraries()
             .SelectMany(f => f.Locations)
             .Select(l => l.EndsWith(Path.DirectorySeparatorChar) ? l : l + Path.DirectorySeparatorChar)
             .ToList();
-    }
 
     private static bool IsInLibraries(Video video, List<string> locations)
         => !string.IsNullOrEmpty(video.Path)
