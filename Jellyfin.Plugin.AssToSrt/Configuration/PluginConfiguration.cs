@@ -69,6 +69,28 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool SingleLine { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether subtitles displayed at the same time in the same screen area are merged
+    /// into one block, so that they never overlap.
+    /// </summary>
+    public bool PreventOverlap { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets what to do with the translations of on-screen text: "Top", "Original" or "Remove".
+    /// </summary>
+    public string SignsMode { get; set; } = "Top";
+
+    /// <summary>
+    /// Gets or sets a value indicating whether song lyrics (opening, ending, karaoke) are removed.
+    /// </summary>
+    public bool RemoveSongs { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the ASS tracks that have an SRT equivalent are hidden from Jellyfin's menus.
+    /// The video files are not modified.
+    /// </summary>
+    public bool HideConvertedAss { get; set; }
+
+    /// <summary>
     /// Gets or sets the end of the last full conversion (ISO 8601, UTC), shown in the settings page.
     /// </summary>
     public string LastRunUtc { get; set; } = string.Empty;

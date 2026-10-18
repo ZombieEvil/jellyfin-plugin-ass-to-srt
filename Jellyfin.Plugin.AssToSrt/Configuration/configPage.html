@@ -5,7 +5,7 @@
     <title>ASS to SRT</title>
 </head>
 <body>
-    <div id="AssToSrtConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+    <div id="AssToSrtConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox,emby-select">
         <div data-role="content">
             <div class="content-primary">
                 <form id="AssToSrtConfigForm">
@@ -38,6 +38,26 @@
                     </div>
 
                     <div class="verticalSection">
+                        <h3 class="sectionTitle" data-t="layoutTitle"></h3>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="PreventOverlap" class="assToSrtStyle" /><span data-t="overlap"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="overlapHelp"></div>
+                        </div>
+                        <div class="selectContainer">
+                            <select is="emby-select" id="SignsMode" class="assToSrtStyle" data-tlabel="signsMode">
+                                <option value="Top" data-t="signsTop"></option>
+                                <option value="Original" data-t="signsOriginal"></option>
+                                <option value="Remove" data-t="signsRemove"></option>
+                            </select>
+                            <div class="fieldDescription" data-t="signsModeHelp"></div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="RemoveSongs" /><span data-t="songs"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="songsHelp"></div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
                         <h3 class="sectionTitle" data-t="styleTitle"></h3>
                         <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepItalic" class="assToSrtStyle" /><span data-t="italic"></span></label></div>
                         <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepBold" class="assToSrtStyle" /><span data-t="bold"></span></label></div>
@@ -55,6 +75,14 @@
                         <div class="fieldDescription" style="margin-top: 1em;" data-t="previewTitle"></div>
                         <div id="AssToSrtPreview" style="background: #000; color: #fff; text-align: center; padding: 1.2em 1em; margin: .5em 0 1em; border-radius: .3em; font-size: 1.15em; line-height: 1.5; text-shadow: 0 0 3px #000, 0 0 3px #000;"></div>
                         <div class="fieldDescription" data-t="appearanceHelp"></div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle" data-t="hideTitle"></h3>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="HideConvertedAss" /><span data-t="hide"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="hideHelp"></div>
+                        </div>
                     </div>
 
                     <div class="verticalSection">
@@ -87,7 +115,8 @@
             (function () {
                 var pluginId = '5c2f7686-19c5-4ab1-b47a-6acdef57ccbd';
                 var checkboxes = ['AutoConvertNewItems', 'ConvertForcedTracks', 'SkipSignsAndSongs', 'UseTrackTitle',
-                    'KeepItalic', 'KeepBold', 'KeepUnderline', 'KeepColors', 'KeepPositions', 'SingleLine'];
+                    'KeepItalic', 'KeepBold', 'KeepUnderline', 'KeepColors', 'KeepPositions', 'SingleLine',
+                    'PreventOverlap', 'RemoveSongs', 'HideConvertedAss'];
                 var videoTypes = [undefined, null, 'movies', 'tvshows', 'homevideos', 'musicvideos', 'mixed'];
                 var page = document.querySelector('#AssToSrtConfigPage');
 
@@ -106,6 +135,19 @@
                         signsHelp: 'These tracks only translate on-screen signs and songs and rely on ASS positioning: they are rarely useful as SRT.',
                         languages: 'Languages to convert',
                         languagesHelp: 'Comma separated, e.g. "fr, en". Leave empty to convert every language.',
+                        layoutTitle: 'Layout',
+                        overlap: 'Prevent overlapping subtitles',
+                        overlapHelp: 'Subtitles shown at the same time in the same area of the screen are stacked in one block instead of being drawn on top of each other.',
+                        signsMode: 'On-screen text (signs, titles, messages)',
+                        signsTop: 'At the top of the screen',
+                        signsOriginal: 'At their original place (top, middle or bottom)',
+                        signsRemove: 'Remove them',
+                        signsModeHelp: 'Many anime subtitles also translate the text shown in the picture. In SRT they cannot follow the picture: by default they go to the top, away from the dialogue.',
+                        songs: 'Remove song lyrics',
+                        songsHelp: 'Lines of the opening, ending, insert songs and karaoke.',
+                        hideTitle: 'Original ASS tracks',
+                        hide: 'Hide the converted ASS tracks (experimental)',
+                        hideHelp: 'Removes the ASS tracks that have an SRT copy from the subtitle menus. Your video files are not modified: uncheck it to show them again. Only possible when the ASS tracks are the last tracks of the file (most anime). Deleting them for good would require rewriting every video file, which the plugin never does.',
                         styleTitle: 'Appearance',
                         italic: 'Keep italic',
                         bold: 'Keep bold',
@@ -148,6 +190,19 @@
                         signsHelp: 'Ces pistes ne traduisent que les panneaux et les chansons et dépendent du placement ASS : elles sont rarement utiles en SRT.',
                         languages: 'Langues à convertir',
                         languagesHelp: 'Séparées par des virgules, ex. "fr, en". Laisse vide pour convertir toutes les langues.',
+                        layoutTitle: 'Mise en page',
+                        overlap: 'Empêcher les sous-titres de se chevaucher',
+                        overlapHelp: 'Les sous-titres affichés en même temps dans la même zone de l\'écran sont empilés dans un seul bloc au lieu d\'être dessinés les uns sur les autres.',
+                        signsMode: 'Textes à l\'écran (panneaux, titres, messages)',
+                        signsTop: 'En haut de l\'écran',
+                        signsOriginal: 'À leur place d\'origine (haut, milieu ou bas)',
+                        signsRemove: 'Les supprimer',
+                        signsModeHelp: 'Beaucoup de sous-titres d\'animes traduisent aussi le texte visible à l\'image. En SRT, ils ne peuvent pas suivre l\'image : par défaut ils vont en haut, loin des dialogues.',
+                        songs: 'Supprimer les paroles des chansons',
+                        songsHelp: 'Les lignes de l\'opening, de l\'ending, des chansons et du karaoké.',
+                        hideTitle: 'Pistes ASS d\'origine',
+                        hide: 'Masquer les pistes ASS converties (expérimental)',
+                        hideHelp: 'Retire des menus de sous-titres les pistes ASS qui ont une copie SRT. Tes fichiers vidéo ne sont pas modifiés : décoche pour les faire réapparaître. Possible seulement quand les pistes ASS sont les dernières pistes du fichier (la plupart des animes). Les supprimer pour de bon obligerait à réécrire chaque fichier vidéo, ce que le plugin ne fait jamais.',
                         styleTitle: 'Apparence',
                         italic: 'Garder l\'italique',
                         bold: 'Garder le gras',
@@ -202,9 +257,15 @@
                     var sign = escapeHtml(t.sample1.toUpperCase());
                     if (o('KeepItalic')) { text = '<i>' + text + '</i>'; }
                     if (o('KeepBold')) { text = '<b>' + text + '</b>'; sign = '<b>' + sign + '</b>'; }
-                    var top = o('KeepPositions')
-                        ? '<div style="margin-bottom:1.5em;opacity:.85">' + sign + ' <small>(' + (lang === 'fr' ? 'en haut' : 'top') + ')</small></div>'
-                        : '';
+                    var signsMode = page.querySelector('#SignsMode').value;
+                    var top = '';
+                    if (signsMode !== 'Remove') {
+                        if (o('KeepPositions')) {
+                            top = '<div style="margin-bottom:1.5em;opacity:.85">' + sign + ' <small>(' + (lang === 'fr' ? 'en haut' : 'top') + ')</small></div>';
+                        } else {
+                            text = sign + '<br>' + text;
+                        }
+                    }
                     page.querySelector('#AssToSrtPreview').innerHTML = top + '<div>' + text + '</div>';
                 }
 
@@ -241,6 +302,7 @@
                     return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         checkboxes.forEach(function (id) { config[id] = page.querySelector('#' + id).checked; });
                         config.Languages = page.querySelector('#Languages').value.trim();
+                        config.SignsMode = page.querySelector('#SignsMode').value;
                         config.LibraryIds = Array.prototype.map.call(
                             page.querySelectorAll('.assToSrtLibrary:checked'),
                             function (el) { return el.getAttribute('data-id'); });
@@ -272,6 +334,7 @@
                         var config = results[0];
                         checkboxes.forEach(function (id) { page.querySelector('#' + id).checked = !!config[id]; });
                         page.querySelector('#Languages').value = config.Languages || '';
+                        page.querySelector('#SignsMode').value = config.SignsMode || 'Top';
                         renderLibraries(results[1], config.LibraryIds || []);
                         renderLastRun(config);
                         renderPreview();

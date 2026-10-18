@@ -3,15 +3,18 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.AssToSrt.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Plugins;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.AssToSrt.Services;
 
 /// <summary>
-/// Converts the subtitles of new or updated videos without waiting for the nightly task.
+/// Converts the subtitles of new or updated videos without waiting for the nightly task,
+/// and applies the "hide ASS tracks" option as soon as it changes.
 /// </summary>
 public sealed class AutoConvertService : IHostedService, IDisposable
 {
@@ -25,6 +28,7 @@ public sealed class AutoConvertService : IHostedService, IDisposable
     private readonly CancellationTokenSource _stopping = new();
     private Timer? _timer;
     private int _running;
+    private bool? _hideConvertedAss;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AutoConvertService"/> class.
@@ -41,6 +45,12 @@ public sealed class AutoConvertService : IHostedService, IDisposable
     {
         _libraryManager.ItemAdded += OnItemChanged;
         _libraryManager.ItemUpdated += OnItemChanged;
+        if (Plugin.Instance is { } plugin)
+        {
+            _hideConvertedAss = plugin.Configuration.HideConvertedAss;
+            plugin.ConfigurationChanged += OnConfigurationChanged;
+        }
+
         _timer = new Timer(_ => _ = ProcessPendingAsync(), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
         return Task.CompletedTask;
     }
@@ -50,6 +60,11 @@ public sealed class AutoConvertService : IHostedService, IDisposable
     {
         _libraryManager.ItemAdded -= OnItemChanged;
         _libraryManager.ItemUpdated -= OnItemChanged;
+        if (Plugin.Instance is { } plugin)
+        {
+            plugin.ConfigurationChanged -= OnConfigurationChanged;
+        }
+
         _timer?.Change(Timeout.Infinite, Timeout.Infinite);
         _stopping.Cancel();
         return Task.CompletedTask;
@@ -62,9 +77,38 @@ public sealed class AutoConvertService : IHostedService, IDisposable
         _stopping.Dispose();
     }
 
+    private void OnConfigurationChanged(object? sender, BasePluginConfiguration e)
+    {
+        if (e is not PluginConfiguration config || config.HideConvertedAss == _hideConvertedAss)
+        {
+            return;
+        }
+
+        _hideConvertedAss = config.HideConvertedAss;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (config.HideConvertedAss)
+                {
+                    await _converter.HideAllAsync(_stopping.Token).ConfigureAwait(false);
+                }
+                else
+                {
+                    _converter.RestoreHiddenTracks();
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "ASS to SRT: cannot apply the \"hide ASS tracks\" option");
+            }
+        });
+    }
+
     private void OnItemChanged(object? sender, ItemChangeEventArgs e)
     {
-        if (Plugin.Instance?.Configuration.AutoConvertNewItems != true)
+        var config = Plugin.Instance?.Configuration;
+        if (config is null || !(config.AutoConvertNewItems || config.HideConvertedAss))
         {
             return;
         }
@@ -100,7 +144,15 @@ public sealed class AutoConvertService : IHostedService, IDisposable
 
                 try
                 {
-                    await _converter.ProcessItemAsync(video, _stopping.Token).ConfigureAwait(false);
+                    // Converting also hides the converted tracks when the option is on.
+                    if (Plugin.Instance?.Configuration.AutoConvertNewItems == true)
+                    {
+                        await _converter.ProcessItemAsync(video, _stopping.Token).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await _converter.HideItemAsync(video, _stopping.Token).ConfigureAwait(false);
+                    }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

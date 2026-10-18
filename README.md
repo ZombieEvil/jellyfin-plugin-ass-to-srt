@@ -16,7 +16,10 @@ Many anime ship with **ASS/SSA** subtitles (colors, fonts, positions). Some Jell
 - 🔍 **Scans your libraries** and converts every ASS/SSA track that has no SRT in the same language yet (embedded in MKV or external `.ass` files).
 - ⚡ **Automatic**: new videos are converted about a minute after Jellyfin has analysed them.
 - 🌙 **Scheduled task** every night (4:00) + a **"Convert now"** button.
-- 🧹 **Clean SRT**: fonts, karaoke and vector drawings removed.
+- 🧱 **No overlapping text**: subtitles shown at the same time in the same area of the screen are stacked in one block. Signs (translated on-screen text) go to the top of the screen, away from the dialogue — or stay at their place, or are removed.
+- 🎵 Optionally remove song lyrics (opening, ending, karaoke).
+- 🙈 Optionally hide the converted ASS tracks from the subtitle menus (experimental, video files are never modified).
+- 🧹 **Clean SRT**: fonts, karaoke effects and vector drawings removed. The plugin reads the ASS file itself (styles, positions), it does not rely on ffmpeg's conversion.
 - 🎨 **Your style**: keep or remove italic, bold, underline, colors, positions (top of screen), one line per subtitle — with a live preview in the settings.
 - 🏷️ **Real track names**: `FR Full [ASS] - Crunchyroll` shows up as `FR Full [SRT] - Crunchyroll`.
 - 🌍 **Languages filter** (e.g. only `fr, en`), forced tracks as `.forced.srt`, "Signs / Songs" tracks skipped (all optional).
@@ -61,7 +64,10 @@ Beaucoup d'animes ont des sous-titres **ASS/SSA** (couleurs, polices, positions)
 - 🔍 **Scanne tes médiathèques** et convertit chaque piste ASS/SSA qui n'a pas encore de SRT dans la même langue (intégrée au MKV ou fichier `.ass` séparé).
 - ⚡ **Automatique** : les nouvelles vidéos sont converties environ une minute après leur analyse par Jellyfin.
 - 🌙 **Tâche planifiée** chaque nuit (4 h) + un bouton **« Convertir maintenant »**.
-- 🧹 **SRT propres** : polices, karaoké et dessins vectoriels retirés.
+- 🧱 **Plus aucun texte qui se chevauche** : les sous-titres affichés en même temps dans la même zone de l'écran sont empilés dans un seul bloc. Les panneaux (textes à l'image traduits) vont en haut de l'écran, loin des dialogues — ou restent à leur place, ou sont supprimés.
+- 🎵 Option pour supprimer les paroles des chansons (opening, ending, karaoké).
+- 🙈 Option pour masquer les pistes ASS converties dans les menus (expérimental, les vidéos ne sont jamais modifiées).
+- 🧹 **SRT propres** : polices, effets karaoké et dessins vectoriels retirés. Le plugin lit lui-même le fichier ASS (styles, positions) au lieu de dépendre de la conversion de ffmpeg.
 - 🎨 **Ton style** : garder ou enlever l'italique, le gras, le soulignement, les couleurs, les positions (haut de l'écran), une seule ligne par réplique — avec un aperçu en direct dans les réglages.
 - 🏷️ **Vrais noms de pistes** : `FR Full [ASS] - Crunchyroll` apparaît comme `FR Full [SRT] - Crunchyroll`.
 - 🌍 **Filtre de langues** (ex. seulement `fr, en`), pistes forcées en `.forced.srt`, pistes « Signs / Songs » ignorées (tout est réglable).

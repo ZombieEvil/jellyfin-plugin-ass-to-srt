@@ -38,9 +38,12 @@ public class RegenerateSrtTask : IScheduledTask
     /// <inheritdoc />
     public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
+        // Hidden ASS tracks are needed to convert again.
+        await _converter.ShowHiddenTracksAndWaitAsync(cancellationToken).ConfigureAwait(false);
+        progress.Report(2);
         var deleted = await _converter.DeleteCreatedSubtitlesAsync().ConfigureAwait(false);
-        progress.Report(1);
-        await _converter.ConvertAllAsync(new Progress<double>(p => progress.Report(1 + (p * 0.99))), cancellationToken, deleted).ConfigureAwait(false);
+        progress.Report(3);
+        await _converter.ConvertAllAsync(new Progress<double>(p => progress.Report(3 + (p * 0.97))), cancellationToken, deleted).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

@@ -14,6 +14,7 @@ using Jellyfin.Plugin.AssToSrt.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.MediaEncoding;
+using MediaBrowser.Controller.Persistence;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Globalization;
@@ -34,6 +35,7 @@ public sealed partial class AssToSrtConverter : IDisposable
 
     private readonly ILibraryManager _libraryManager;
     private readonly IMediaSourceManager _mediaSourceManager;
+    private readonly IMediaStreamRepository _mediaStreamRepository;
     private readonly IMediaEncoder _mediaEncoder;
     private readonly IProviderManager _providerManager;
     private readonly IFileSystem _fileSystem;
@@ -47,6 +49,7 @@ public sealed partial class AssToSrtConverter : IDisposable
     public AssToSrtConverter(
         ILibraryManager libraryManager,
         IMediaSourceManager mediaSourceManager,
+        IMediaStreamRepository mediaStreamRepository,
         IMediaEncoder mediaEncoder,
         IProviderManager providerManager,
         IFileSystem fileSystem,
@@ -55,6 +58,7 @@ public sealed partial class AssToSrtConverter : IDisposable
     {
         _libraryManager = libraryManager;
         _mediaSourceManager = mediaSourceManager;
+        _mediaStreamRepository = mediaStreamRepository;
         _mediaEncoder = mediaEncoder;
         _providerManager = providerManager;
         _fileSystem = fileSystem;
@@ -66,6 +70,9 @@ public sealed partial class AssToSrtConverter : IDisposable
 
     // List of the SRT files written by the plugin, so that they can be regenerated with new settings.
     private static string RegistryPath => Path.Combine(Plugin.Instance!.DataFolderPath, "created-subtitles.json");
+
+    // Videos whose ASS tracks are hidden from Jellyfin, so that they can be shown again.
+    private static string HiddenPath => Path.Combine(Plugin.Instance!.DataFolderPath, "hidden-items.json");
 
     [GeneratedRegex(@"\b(forced|forc[ée]s?|foreign)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ForcedTitle();
@@ -127,6 +134,11 @@ public sealed partial class AssToSrtConverter : IDisposable
         var convertedVideos = 0;
         var failed = 0;
 
+        if (!Config.HideConvertedAss)
+        {
+            RestoreHiddenTracks();
+        }
+
         for (var i = 0; i < items.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -155,6 +167,86 @@ public sealed partial class AssToSrtConverter : IDisposable
 
         _logger.LogInformation("ASS to SRT: {Count} videos checked, {Created} SRT created, {Failed} errors", items.Count, created, failed);
         SaveLastRun(items.Count, convertedVideos, created, failed);
+    }
+
+    /// <summary>
+    /// Makes the hidden ASS tracks of the selected libraries visible again and waits for Jellyfin to list them,
+    /// so that they can be converted again.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async Task ShowHiddenTracksAndWaitAsync(CancellationToken cancellationToken)
+    {
+        var hidden = LoadIds(HiddenPath);
+        var locations = GetLibraryLocations();
+        foreach (var id in hidden.ToList())
+        {
+            if (_libraryManager.GetItemById(id) is Video video && IsInLibraries(video, locations))
+            {
+                await _providerManager.RefreshSingleItem(video, ProbeOptions(), cancellationToken).ConfigureAwait(false);
+                hidden.Remove(id);
+            }
+        }
+
+        SaveIds(HiddenPath, hidden);
+    }
+
+    /// <summary>
+    /// Shows again every ASS track hidden by the plugin (Jellyfin analyses the videos again).
+    /// </summary>
+    public void RestoreHiddenTracks()
+    {
+        var hidden = LoadIds(HiddenPath);
+        if (hidden.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var id in hidden)
+        {
+            _providerManager.QueueRefresh(id, ProbeOptions(), RefreshPriority.High);
+        }
+
+        SaveIds(HiddenPath, new HashSet<Guid>());
+        _logger.LogInformation("ASS to SRT: showing the ASS tracks of {Count} videos again", hidden.Count);
+    }
+
+    /// <summary>
+    /// Hides the converted ASS tracks of every video of the selected libraries.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async Task HideAllAsync(CancellationToken cancellationToken)
+    {
+        foreach (var video in GetCandidateItems())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await HideItemAsync(video, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Hides the converted ASS tracks of one video, when the option is on.
+    /// </summary>
+    /// <param name="video">The video.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async Task HideItemAsync(Video video, CancellationToken cancellationToken)
+    {
+        if (!Config.HideConvertedAss)
+        {
+            return;
+        }
+
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            HideConvertedTracks(video);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     /// <summary>
@@ -233,6 +325,11 @@ public sealed partial class AssToSrtConverter : IDisposable
             var jobs = PlanJobs(video);
             if (jobs.Count == 0)
             {
+                if (Config.HideConvertedAss)
+                {
+                    HideConvertedTracks(video);
+                }
+
                 return 0;
             }
 
@@ -242,12 +339,16 @@ public sealed partial class AssToSrtConverter : IDisposable
             var embedded = jobs.Where(j => !j.Source.IsExternal).ToList();
             if (embedded.Count > 0)
             {
-                created.AddRange(await ConvertAsync(video, video.Path, embedded, cancellationToken).ConfigureAwait(false));
+                created.AddRange(await ConvertEmbeddedAsync(video, embedded, cancellationToken).ConfigureAwait(false));
             }
 
             foreach (var job in jobs.Where(j => j.Source.IsExternal))
             {
-                created.AddRange(await ConvertAsync(video, job.Source.Path, new List<Job> { job }, cancellationToken).ConfigureAwait(false));
+                var content = await ReadTextAsync(job.Source.Path, cancellationToken).ConfigureAwait(false);
+                if (await WriteSrtAsync(video, job, content, cancellationToken).ConfigureAwait(false) is { } path)
+                {
+                    created.Add(path);
+                }
             }
 
             if (created.Count > 0)
@@ -259,6 +360,8 @@ public sealed partial class AssToSrtConverter : IDisposable
                 }
 
                 SaveRegistry(registry);
+
+                // The ASS tracks are hidden after this refresh, when Jellyfin lists the new SRT.
                 QueueRefresh(video);
             }
 
@@ -269,6 +372,9 @@ public sealed partial class AssToSrtConverter : IDisposable
             _lock.Release();
         }
     }
+
+    /// <inheritdoc />
+    public void Dispose() => _lock.Dispose();
 
     // Same as "Scan for new and updated files": makes Jellyfin pick up added or removed external subtitles.
     private void QueueRefresh(Video video)
@@ -281,15 +387,21 @@ public sealed partial class AssToSrtConverter : IDisposable
             },
             RefreshPriority.Normal);
 
-    /// <inheritdoc />
-    public void Dispose() => _lock.Dispose();
+    // Analyses the video file again: lists every track, including the hidden ones.
+    private MetadataRefreshOptions ProbeOptions()
+        => new(new DirectoryService(_fileSystem))
+        {
+            MetadataRefreshMode = MetadataRefreshMode.FullRefresh,
+            ImageRefreshMode = MetadataRefreshMode.Default,
+            ReplaceAllMetadata = false,
+            ReplaceAllImages = false
+        };
 
     private List<Job> PlanJobs(Video video)
     {
         var config = Config;
-        var subtitles = _mediaSourceManager.GetMediaStreams(video.Id)
-            .Where(s => s.Type == MediaStreamType.Subtitle)
-            .ToList();
+        var streams = _mediaSourceManager.GetMediaStreams(video.Id).OrderBy(s => s.Index).ToList();
+        var subtitles = streams.Where(s => s.Type == MediaStreamType.Subtitle).ToList();
 
         var assTracks = subtitles.Where(s => IsCodec(s, AssCodecs)).ToList();
         if (assTracks.Count == 0)
@@ -297,17 +409,16 @@ public sealed partial class AssToSrtConverter : IDisposable
             return new List<Job>();
         }
 
-        // Language + forced combinations that already have an SRT (ignoring external files deleted since the last scan).
-        var covered = subtitles
-            .Where(s => IsCodec(s, SrtCodecs) && (!s.IsExternal || File.Exists(s.Path)))
-            .Select(s => (LanguageKey(s.Language), IsForcedTrack(s)))
-            .ToHashSet();
+        var covered = CoveredGroups(subtitles);
 
         var wantedLanguages = config.Languages
             .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(LanguageKey)
             .Where(l => l.Length > 0)
             .ToHashSet();
+
+        // ffmpeg numbers the tracks of the file itself; Jellyfin numbers external subtitles first.
+        var embeddedStreams = streams.Where(s => !s.IsExternal).ToList();
 
         var baseName = Path.GetFileNameWithoutExtension(video.Path);
         var jobs = new List<Job>();
@@ -335,10 +446,56 @@ public sealed partial class AssToSrtConverter : IDisposable
                 continue;
             }
 
-            jobs.Add(new Job(source, fileName));
+            jobs.Add(new Job(source, fileName, source.IsExternal ? 0 : embeddedStreams.IndexOf(source)));
         }
 
         return jobs;
+    }
+
+    // Language + forced combinations that already have an SRT (ignoring external files deleted since the last scan).
+    private HashSet<(string Language, bool Forced)> CoveredGroups(IEnumerable<MediaStream> subtitles)
+        => subtitles
+            .Where(s => IsCodec(s, SrtCodecs) && (!s.IsExternal || File.Exists(s.Path)))
+            .Select(s => (LanguageKey(s.Language), IsForcedTrack(s)))
+            .ToHashSet();
+
+    // Removes from Jellyfin's list the ASS tracks that have an SRT equivalent. The video file is not modified.
+    private void HideConvertedTracks(Video video)
+    {
+        var streams = _mediaSourceManager.GetMediaStreams(video.Id).OrderBy(s => s.Index).ToList();
+        var covered = CoveredGroups(streams.Where(s => s.Type == MediaStreamType.Subtitle));
+        var hideable = streams
+            .Where(s => s.Type == MediaStreamType.Subtitle && IsCodec(s, AssCodecs) && covered.Contains((LanguageKey(s.Language), IsForcedTrack(s))))
+            .ToHashSet();
+        if (hideable.Count == 0)
+        {
+            return;
+        }
+
+        // Jellyfin finds a track of the file by its position in the list: only trailing tracks can be removed
+        // without changing the position of the others.
+        var hidden = hideable.Where(s => s.IsExternal).ToList();
+        var embedded = streams.Where(s => !s.IsExternal).ToList();
+        for (var i = embedded.Count - 1; i >= 0 && hideable.Contains(embedded[i]); i--)
+        {
+            hidden.Add(embedded[i]);
+        }
+
+        if (hidden.Count == 0)
+        {
+            _logger.LogInformation("ASS to SRT: the ASS tracks of {Path} cannot be hidden (other tracks follow them in the file)", video.Path);
+            return;
+        }
+
+        _mediaStreamRepository.SaveMediaStreams(video.Id, streams.Except(hidden).ToList(), CancellationToken.None);
+
+        var ids = LoadIds(HiddenPath);
+        if (ids.Add(video.Id))
+        {
+            SaveIds(HiddenPath, ids);
+        }
+
+        _logger.LogInformation("ASS to SRT: {Count} ASS tracks hidden for {Path}", hidden.Count, video.Path);
     }
 
     // Jellyfin reads "<video>.<title>.<language>.<flags>.srt": unknown parts become the displayed track name.
@@ -390,20 +547,17 @@ public sealed partial class AssToSrtConverter : IDisposable
         return cleaned.Length > 100 ? cleaned[..100].Trim() : cleaned;
     }
 
-    private async Task<List<string>> ConvertAsync(Video video, string inputPath, List<Job> jobs, CancellationToken cancellationToken)
+    // Extracts the ASS tracks as they are (styles and positions included) in a single pass.
+    private async Task<List<string>> ConvertEmbeddedAsync(Video video, List<Job> jobs, CancellationToken cancellationToken)
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "jellyfin-asstosrt");
         Directory.CreateDirectory(tempDir);
-        var temps = jobs.Select(_ => Path.Combine(tempDir, Guid.NewGuid().ToString("N") + ".srt")).ToList();
+        var temps = jobs.Select(_ => Path.Combine(tempDir, Guid.NewGuid().ToString("N") + ".ass")).ToList();
 
-        var args = new List<string> { "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", inputPath };
+        var args = new List<string> { "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", video.Path };
         for (var i = 0; i < jobs.Count; i++)
         {
-            args.Add("-map");
-            args.Add(jobs[i].Source.IsExternal ? "0:s:0" : "0:" + jobs[i].Source.Index.ToString(CultureInfo.InvariantCulture));
-            args.Add("-c:s");
-            args.Add("srt");
-            args.Add(temps[i]);
+            args.AddRange(new[] { "-map", "0:" + jobs[i].FfmpegIndex.ToString(CultureInfo.InvariantCulture), "-c:s", "copy", "-f", "ass", temps[i] });
         }
 
         var created = new List<string>();
@@ -412,11 +566,10 @@ public sealed partial class AssToSrtConverter : IDisposable
             var (exitCode, error) = await RunFfmpegAsync(args, cancellationToken).ConfigureAwait(false);
             if (exitCode != 0)
             {
-                _logger.LogWarning("ASS to SRT: ffmpeg failed on {Path} (code {Code}): {Error}", inputPath, exitCode, error);
+                _logger.LogWarning("ASS to SRT: ffmpeg failed on {Path} (code {Code}): {Error}", video.Path, exitCode, error);
                 return created;
             }
 
-            var style = StyleOptions(Config);
             for (var i = 0; i < jobs.Count; i++)
             {
                 if (!File.Exists(temps[i]))
@@ -424,18 +577,10 @@ public sealed partial class AssToSrtConverter : IDisposable
                     continue;
                 }
 
-                var cleaned = SrtCleaner.Clean(await File.ReadAllTextAsync(temps[i], cancellationToken).ConfigureAwait(false), style);
-                if (cleaned.Length == 0)
+                var content = await ReadTextAsync(temps[i], cancellationToken).ConfigureAwait(false);
+                if (await WriteSrtAsync(video, jobs[i], content, cancellationToken).ConfigureAwait(false) is { } path)
                 {
-                    _logger.LogInformation("ASS to SRT: track {Index} of {Path} has no readable text, skipped", jobs[i].Source.Index, video.Path);
-                    continue;
-                }
-
-                var destination = await WriteSubtitleAsync(video, jobs[i].FileName, cleaned, cancellationToken).ConfigureAwait(false);
-                if (destination is not null)
-                {
-                    _logger.LogInformation("ASS to SRT: created {Destination}", destination);
-                    created.Add(destination);
+                    created.Add(path);
                 }
             }
 
@@ -456,14 +601,41 @@ public sealed partial class AssToSrtConverter : IDisposable
         }
     }
 
-    private static SrtStyleOptions StyleOptions(PluginConfiguration config) => new()
+    private async Task<string?> WriteSrtAsync(Video video, Job job, string assContent, CancellationToken cancellationToken)
+    {
+        var srt = SrtWriter.Write(AssDocument.Parse(assContent), SrtOptions(Config));
+        if (srt.Length == 0)
+        {
+            _logger.LogInformation("ASS to SRT: track {Index} of {Path} has nothing left to display, skipped", job.Source.Index, video.Path);
+            return null;
+        }
+
+        var destination = await WriteSubtitleAsync(video, job.FileName, srt, cancellationToken).ConfigureAwait(false);
+        if (destination is not null)
+        {
+            _logger.LogInformation("ASS to SRT: created {Destination}", destination);
+        }
+
+        return destination;
+    }
+
+    private static async Task<string> ReadTextAsync(string path, CancellationToken cancellationToken)
+    {
+        using var reader = new StreamReader(path, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static SrtOptions SrtOptions(PluginConfiguration config) => new()
     {
         KeepItalic = config.KeepItalic,
         KeepBold = config.KeepBold,
         KeepUnderline = config.KeepUnderline,
         KeepColors = config.KeepColors,
         KeepPositions = config.KeepPositions,
-        SingleLine = config.SingleLine
+        SingleLine = config.SingleLine,
+        PreventOverlap = config.PreventOverlap,
+        Signs = Enum.TryParse<SignsMode>(config.SignsMode, true, out var signs) ? signs : SignsMode.Top,
+        RemoveSongs = config.RemoveSongs
     };
 
     private async Task<string?> WriteSubtitleAsync(Video video, string fileName, string content, CancellationToken cancellationToken)
@@ -523,16 +695,41 @@ public sealed partial class AssToSrtConverter : IDisposable
         return new Dictionary<string, string>();
     }
 
-    private void SaveRegistry(Dictionary<string, string> registry)
+    private void SaveRegistry(Dictionary<string, string> registry) => WriteJson(RegistryPath, registry);
+
+    private HashSet<Guid> LoadIds(string path)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(RegistryPath)!);
-            File.WriteAllText(RegistryPath, JsonSerializer.Serialize(registry));
+            if (File.Exists(path))
+            {
+                return (JsonSerializer.Deserialize<List<string>>(File.ReadAllText(path)) ?? new List<string>())
+                    .Select(s => Guid.TryParse(s, out var g) ? g : Guid.Empty)
+                    .Where(g => g != Guid.Empty)
+                    .ToHashSet();
+            }
+        }
+        catch (Exception ex) when (ex is IOException or JsonException)
+        {
+            _logger.LogWarning(ex, "ASS to SRT: cannot read {Path}", path);
+        }
+
+        return new HashSet<Guid>();
+    }
+
+    private void SaveIds(string path, HashSet<Guid> ids)
+        => WriteJson(path, ids.Select(g => g.ToString("N", CultureInfo.InvariantCulture)).ToList());
+
+    private void WriteJson<T>(string path, T value)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, JsonSerializer.Serialize(value));
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
-            _logger.LogWarning(ex, "ASS to SRT: cannot write {Path}", RegistryPath);
+            _logger.LogWarning(ex, "ASS to SRT: cannot write {Path}", path);
         }
     }
 
@@ -613,7 +810,7 @@ public sealed partial class AssToSrtConverter : IDisposable
         return (process.ExitCode, (await stderr.ConfigureAwait(false)).Trim());
     }
 
-    private List<MediaBrowser.Model.Entities.VirtualFolderInfo> GetSelectedLibraries()
+    private List<VirtualFolderInfo> GetSelectedLibraries()
     {
         var selected = Config.LibraryIds
             .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
@@ -664,5 +861,5 @@ public sealed partial class AssToSrtConverter : IDisposable
         return new string(language.Where(char.IsLetter).ToArray()).ToLowerInvariant();
     }
 
-    private sealed record Job(MediaStream Source, string FileName);
+    private sealed record Job(MediaStream Source, string FileName, int FfmpegIndex);
 }
