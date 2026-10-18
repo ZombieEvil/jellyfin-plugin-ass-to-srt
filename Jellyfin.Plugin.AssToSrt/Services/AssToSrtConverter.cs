@@ -113,10 +113,13 @@ public sealed partial class AssToSrtConverter : IDisposable
     private static PluginConfiguration Config => Plugin.Instance?.Configuration ?? new PluginConfiguration();
 
     // List of the SRT files written by the plugin, so that they can be regenerated with new settings.
-    private static string RegistryPath => Path.Combine(Plugin.Instance!.DataFolderPath, "created-subtitles.json");
+    private static string RegistryPath => Path.Combine(DataFolder, "created-subtitles.json");
+
+    // Next to the plugin configuration: the plugin's own folder is replaced at every update.
+    private static string DataFolder => Path.Combine(Path.GetDirectoryName(Plugin.Instance!.ConfigurationFilePath)!, "AssToSrt");
 
     // Videos whose ASS tracks are hidden from Jellyfin, so that they can be shown again.
-    private static string HiddenPath => Path.Combine(Plugin.Instance!.DataFolderPath, "hidden-items.json");
+    private static string HiddenPath => Path.Combine(DataFolder, "hidden-items.json");
 
     [GeneratedRegex(@"\b(forced|forc[ée]s?|foreign)\b", RegexOptions.IgnoreCase)]
     private static partial Regex ForcedTitle();
