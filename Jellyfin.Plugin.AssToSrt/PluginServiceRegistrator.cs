@@ -14,6 +14,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
         serviceCollection.AddSingleton<AssToSrtConverter>();
-        serviceCollection.AddHostedService<AutoConvertService>();
+
+        // One instance: background service and queue used by the settings page.
+        serviceCollection.AddSingleton<AutoConvertService>();
+        serviceCollection.AddHostedService(provider => provider.GetRequiredService<AutoConvertService>());
     }
 }

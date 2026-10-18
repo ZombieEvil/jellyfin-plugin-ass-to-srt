@@ -1,5 +1,7 @@
 # ASS to SRT — Jellyfin plugin
 
+![ASS to SRT](images/logo.png)
+
 🇬🇧 [English](#english) · 🇫🇷 [Français](#français)
 
 ---
@@ -17,7 +19,13 @@ Many anime ship with **ASS/SSA** subtitles (colors, fonts, positions). Some Jell
 - ⚡ **Automatic**: new videos are converted about a minute after Jellyfin has analysed them.
 - 🌙 **Scheduled task** every night (4:00) + a **"Convert now"** button.
 - 🧱 **No overlapping text**: subtitles shown at the same time in the same area of the screen are stacked in one block. Signs (translated on-screen text) go to the top of the screen, away from the dialogue — or stay at their place, or are removed.
-- 🎵 Optionally remove song lyrics (opening, ending, karaoke).
+- 🎨 Signs in color (yellow by default), song lyrics marked with ♪ — or removed.
+- 📐 Long lines split into balanced lines (42 characters by default), very short subtitles kept on screen a bit longer, optional speaker names.
+- ⏭️ **Next episodes first**: when you start an episode, it and the next ones are converted right away. Mode "only prepare the next episodes" for big libraries.
+- 🐢 **Gentle with small servers**: conversions slow down (or wait) while a video is playing, optional time window (e.g. 1:00–7:00).
+- 🔎 **Preview with a real episode** and **convert a single series** from the settings page.
+- 📊 Statistics, Jellyfin activity log entries, cleanup of the SRT files of removed videos.
+- 🌍 Settings page in English, French, Spanish, German, Portuguese and Italian.
 - 🙈 Optionally hide the converted ASS tracks from the subtitle menus (experimental, video files are never modified).
 - 🧹 **Clean SRT**: fonts, karaoke effects and vector drawings removed. The plugin reads the ASS file itself (styles, positions), it does not rely on ffmpeg's conversion.
 - 🎨 **Your style**: keep or remove italic, bold, underline, colors, positions (top of screen), one line per subtitle — with a live preview in the settings.
@@ -65,7 +73,13 @@ Beaucoup d'animes ont des sous-titres **ASS/SSA** (couleurs, polices, positions)
 - ⚡ **Automatique** : les nouvelles vidéos sont converties environ une minute après leur analyse par Jellyfin.
 - 🌙 **Tâche planifiée** chaque nuit (4 h) + un bouton **« Convertir maintenant »**.
 - 🧱 **Plus aucun texte qui se chevauche** : les sous-titres affichés en même temps dans la même zone de l'écran sont empilés dans un seul bloc. Les panneaux (textes à l'image traduits) vont en haut de l'écran, loin des dialogues — ou restent à leur place, ou sont supprimés.
-- 🎵 Option pour supprimer les paroles des chansons (opening, ending, karaoké).
+- 🎨 Panneaux en couleur (jaune par défaut), paroles des chansons marquées avec ♪ — ou supprimées.
+- 📐 Lignes trop longues coupées proprement (42 caractères par défaut), sous-titres très courts affichés un peu plus longtemps, nom du personnage en option.
+- ⏭️ **Les prochains épisodes d'abord** : quand tu lances un épisode, il est converti tout de suite avec les suivants. Mode « préparer seulement les prochains épisodes » pour les grosses collections.
+- 🐢 **Doux avec les petits serveurs** : les conversions ralentissent (ou attendent) pendant la lecture d'une vidéo, plage horaire en option (ex. 1 h – 7 h).
+- 🔎 **Aperçu avec un vrai épisode** et **conversion d'une seule série** depuis la page de réglages.
+- 📊 Statistiques, messages dans le journal d'activité de Jellyfin, nettoyage des SRT des vidéos supprimées.
+- 🌍 Page de réglages en français, anglais, espagnol, allemand, portugais et italien.
 - 🙈 Option pour masquer les pistes ASS converties dans les menus (expérimental, les vidéos ne sont jamais modifiées).
 - 🧹 **SRT propres** : polices, effets karaoké et dessins vectoriels retirés. Le plugin lit lui-même le fichier ASS (styles, positions) au lieu de dépendre de la conversion de ffmpeg.
 - 🎨 **Ton style** : garder ou enlever l'italique, le gras, le soulignement, les couleurs, les positions (haut de l'écran), une seule ligne par réplique — avec un aperçu en direct dans les réglages.

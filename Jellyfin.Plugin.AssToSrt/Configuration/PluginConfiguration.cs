@@ -91,6 +91,77 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool HideConvertedAss { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether signs are written in <see cref="SignColor"/>.
+    /// </summary>
+    public bool ColorSigns { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the color of signs (#RRGGBB).
+    /// </summary>
+    public string SignColor { get; set; } = "#FFE066";
+
+    /// <summary>
+    /// Gets or sets a value indicating whether song lyrics are surrounded by ♪.
+    /// </summary>
+    public bool MarkSongs { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the maximum number of characters per line, 0 to keep the original lines.
+    /// </summary>
+    public int MaxLineLength { get; set; } = 42;
+
+    /// <summary>
+    /// Gets or sets the minimum display time in milliseconds, 0 to keep the original timing.
+    /// </summary>
+    public int MinDurationMs { get; set; } = 1000;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the speaker name is written before the dialogue.
+    /// </summary>
+    public bool ShowSpeakerNames { get; set; }
+
+    /// <summary>
+    /// Gets or sets the conversion mode: "All" converts every video (nightly task and new videos),
+    /// "Upcoming" only converts the episodes that follow the one being watched.
+    /// </summary>
+    public string ConversionMode { get; set; } = "All";
+
+    /// <summary>
+    /// Gets or sets how many following episodes are prepared when an episode starts.
+    /// </summary>
+    public int UpcomingCount { get; set; } = 3;
+
+    /// <summary>
+    /// Gets or sets what conversions do while a video is playing: "Slow" (read the file gently), "Pause" or "Normal".
+    /// </summary>
+    public string PlaybackBehavior { get; set; } = "Slow";
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the nightly task and the conversion of new videos only run in the time window.
+    /// </summary>
+    public bool UseTimeWindow { get; set; }
+
+    /// <summary>
+    /// Gets or sets the hour (0-23) the time window starts.
+    /// </summary>
+    public int WindowStartHour { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the hour (0-23) the time window ends.
+    /// </summary>
+    public int WindowEndHour { get; set; } = 7;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether conversions are reported in Jellyfin's activity log.
+    /// </summary>
+    public bool LogActivity { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the SRT files created by the plugin are deleted with their video.
+    /// </summary>
+    public bool CleanupOnRemove { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the end of the last full conversion (ISO 8601, UTC), shown in the settings page.
     /// </summary>
     public string LastRunUtc { get; set; } = string.Empty;

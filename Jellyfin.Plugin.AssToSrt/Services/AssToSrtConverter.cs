@@ -10,12 +10,17 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
+using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Plugin.AssToSrt.Configuration;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.MediaEncoding;
 using MediaBrowser.Controller.Persistence;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Controller.Session;
+using MediaBrowser.Model.Activity;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Globalization;
 using MediaBrowser.Model.IO;
@@ -40,8 +45,12 @@ public sealed partial class AssToSrtConverter : IDisposable
     private readonly IProviderManager _providerManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILocalizationManager _localizationManager;
+    private readonly ISessionManager _sessionManager;
+    private readonly IActivityManager _activityManager;
+    private readonly IServerConfigurationManager _serverConfiguration;
     private readonly ILogger<AssToSrtConverter> _logger;
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private int _manualRunRequested;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AssToSrtConverter"/> class.
@@ -54,6 +63,9 @@ public sealed partial class AssToSrtConverter : IDisposable
         IProviderManager providerManager,
         IFileSystem fileSystem,
         ILocalizationManager localizationManager,
+        ISessionManager sessionManager,
+        IActivityManager activityManager,
+        IServerConfigurationManager serverConfiguration,
         ILogger<AssToSrtConverter> logger)
     {
         _libraryManager = libraryManager;
@@ -63,7 +75,39 @@ public sealed partial class AssToSrtConverter : IDisposable
         _providerManager = providerManager;
         _fileSystem = fileSystem;
         _localizationManager = localizationManager;
+        _sessionManager = sessionManager;
+        _activityManager = activityManager;
+        _serverConfiguration = serverConfiguration;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Marks the next full conversion as started by the user: it ignores the time window.
+    /// </summary>
+    public void RequestManualRun() => Interlocked.Exchange(ref _manualRunRequested, 1);
+
+    /// <summary>
+    /// Returns true once after <see cref="RequestManualRun"/>.
+    /// </summary>
+    /// <returns>Whether the current run was started by the user.</returns>
+    public bool ConsumeManualRun() => Interlocked.Exchange(ref _manualRunRequested, 0) == 1;
+
+    /// <summary>
+    /// Returns true when background conversions are allowed now (always true without time window).
+    /// </summary>
+    /// <returns>Whether the current hour is in the configured time window.</returns>
+    public static bool IsInTimeWindow()
+    {
+        var config = Config;
+        if (!config.UseTimeWindow)
+        {
+            return true;
+        }
+
+        var hour = DateTime.Now.Hour;
+        var start = Math.Clamp(config.WindowStartHour, 0, 23);
+        var end = Math.Clamp(config.WindowEndHour, 0, 23);
+        return start <= end ? hour >= start && hour < end : hour >= start || hour < end;
     }
 
     private static PluginConfiguration Config => Plugin.Instance?.Configuration ?? new PluginConfiguration();
@@ -126,8 +170,9 @@ public sealed partial class AssToSrtConverter : IDisposable
     /// <param name="progress">Progress.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <param name="deletedItems">Videos whose SRT were deleted just before: refreshed even if nothing is recreated.</param>
+    /// <param name="respectTimeWindow">Stop when the time window ends (scheduled runs).</param>
     /// <returns>A task.</returns>
-    public async Task ConvertAllAsync(IProgress<double> progress, CancellationToken cancellationToken, IReadOnlySet<Guid>? deletedItems = null)
+    public async Task ConvertAllAsync(IProgress<double> progress, CancellationToken cancellationToken, IReadOnlySet<Guid>? deletedItems = null, bool respectTimeWindow = false)
     {
         var items = GetCandidateItems();
         var created = 0;
@@ -142,6 +187,12 @@ public sealed partial class AssToSrtConverter : IDisposable
         for (var i = 0; i < items.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (respectTimeWindow && !IsInTimeWindow())
+            {
+                _logger.LogInformation("ASS to SRT: end of the time window, the conversion continues next time");
+                break;
+            }
+
             try
             {
                 var count = await ProcessItemAsync(items[i], cancellationToken).ConfigureAwait(false);
@@ -167,6 +218,244 @@ public sealed partial class AssToSrtConverter : IDisposable
 
         _logger.LogInformation("ASS to SRT: {Count} videos checked, {Created} SRT created, {Failed} errors", items.Count, created, failed);
         SaveLastRun(items.Count, convertedVideos, created, failed);
+        if (created > 0 || failed > 0)
+        {
+            await LogActivityAsync(Messages.FullRun(Culture, convertedVideos, created, failed)).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Writes an entry in Jellyfin's activity log, when the option is on.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <returns>A task.</returns>
+    public async Task LogActivityAsync(string message)
+    {
+        if (!Config.LogActivity)
+        {
+            return;
+        }
+
+        try
+        {
+            await _activityManager.CreateAsync(new ActivityLog(message, "AssToSrt", Guid.Empty)).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "ASS to SRT: cannot write to the activity log");
+        }
+    }
+
+    /// <summary>
+    /// Gets the language of the server interface, used for activity messages.
+    /// </summary>
+    public string Culture => _serverConfiguration.Configuration.UICulture ?? "en";
+
+    /// <summary>
+    /// Returns the videos of a series, season, folder or the video itself.
+    /// </summary>
+    /// <param name="itemId">The item id.</param>
+    /// <returns>The videos, in episode order.</returns>
+    public List<Video> ResolveVideos(Guid itemId)
+    {
+        var item = _libraryManager.GetItemById(itemId);
+        if (item is Video video)
+        {
+            return new List<Video> { video };
+        }
+
+        if (item is null)
+        {
+            return new List<Video>();
+        }
+
+        return _libraryManager.GetItemList(new InternalItemsQuery
+            {
+                AncestorIds = new[] { item.Id },
+                MediaTypes = new[] { MediaType.Video },
+                IsVirtualItem = false,
+                IsFolder = false,
+                Recursive = true
+            })
+            .OfType<Video>()
+            .OrderBy(v => v.ParentIndexNumber ?? 0)
+            .ThenBy(v => v.IndexNumber ?? 0)
+            .ThenBy(v => v.SortName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Returns the episodes that follow the given one in its series.
+    /// </summary>
+    /// <param name="episode">The episode being watched.</param>
+    /// <param name="count">How many episodes.</param>
+    /// <returns>The following episodes.</returns>
+    public List<Video> GetUpcomingEpisodes(Episode episode, int count)
+    {
+        if (count <= 0 || episode.SeriesId == Guid.Empty)
+        {
+            return new List<Video>();
+        }
+
+        var specials = (episode.ParentIndexNumber ?? 0) == 0;
+        var episodes = ResolveVideos(episode.SeriesId)
+            .Where(v => specials || (v.ParentIndexNumber ?? 0) != 0)
+            .ToList();
+        var index = episodes.FindIndex(v => v.Id == episode.Id);
+        return index < 0 ? new List<Video>() : episodes.Skip(index + 1).Take(count).ToList();
+    }
+
+    /// <summary>
+    /// Gets the statistics shown in the settings page.
+    /// </summary>
+    /// <returns>The statistics.</returns>
+    public ConversionStats GetStats()
+    {
+        var registry = LoadRegistry();
+        var existing = registry.Keys.Where(File.Exists).ToList();
+        return new ConversionStats
+        {
+            SrtFiles = existing.Count,
+            Videos = registry.Where(r => File.Exists(r.Key)).Select(r => ResolveItemId(r.Key, r.Value)).Where(g => g != Guid.Empty).Distinct().Count(),
+            SizeBytes = existing.Sum(p => new FileInfo(p).Length),
+            HiddenVideos = LoadIds(HiddenPath).Count
+        };
+    }
+
+    /// <summary>
+    /// Deletes the SRT files created for a video that was removed from the library.
+    /// </summary>
+    /// <param name="itemId">The removed video.</param>
+    /// <returns>A task.</returns>
+    public async Task CleanupRemovedAsync(Guid itemId)
+    {
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var registry = LoadRegistry();
+            var removed = 0;
+            foreach (var (path, id) in registry.ToList())
+            {
+                if (ResolveItemId(path, id) != itemId)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                    }
+
+                    registry.Remove(path);
+                    removed++;
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+                {
+                    _logger.LogWarning(ex, "ASS to SRT: cannot delete {Path}", path);
+                }
+            }
+
+            if (removed > 0)
+            {
+                SaveRegistry(registry);
+                _logger.LogInformation("ASS to SRT: {Count} SRT files of a removed video deleted", removed);
+            }
+
+            var hidden = LoadIds(HiddenPath);
+            if (hidden.Remove(itemId))
+            {
+                SaveIds(HiddenPath, hidden);
+            }
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Converts the beginning of the ASS tracks of a video with the given settings, without writing anything.
+    /// </summary>
+    /// <param name="itemId">The video.</param>
+    /// <param name="settings">Settings to try.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The preview, or null when the video has no ASS track.</returns>
+    public async Task<List<PreviewTrack>?> PreviewAsync(Guid itemId, PluginConfiguration settings, CancellationToken cancellationToken)
+    {
+        if (_libraryManager.GetItemById(itemId) is not Video video || string.IsNullOrEmpty(video.Path))
+        {
+            return null;
+        }
+
+        var streams = _mediaSourceManager.GetMediaStreams(video.Id).OrderBy(s => s.Index).ToList();
+        var embeddedStreams = streams.Where(s => !s.IsExternal).ToList();
+        var tracks = streams
+            .Where(s => s.Type == MediaStreamType.Subtitle && IsCodec(s, AssCodecs))
+            .OrderBy(IsForcedTrack)
+            .ThenByDescending(s => s.IsDefault)
+            .Take(2)
+            .ToList();
+        if (tracks.Count == 0)
+        {
+            return null;
+        }
+
+        var options = SrtOptions(settings);
+        var result = new List<PreviewTrack>();
+        const int PreviewMinutes = 10;
+        foreach (var track in tracks)
+        {
+            string content;
+            if (track.IsExternal)
+            {
+                content = await ReadTextAsync(track.Path, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                var temp = Path.Combine(Path.GetTempPath(), "jellyfin-asstosrt", Guid.NewGuid().ToString("N") + ".ass");
+                Directory.CreateDirectory(Path.GetDirectoryName(temp)!);
+                try
+                {
+                    // Only the first minutes: much faster than reading the whole file.
+                    var args = new List<string>
+                    {
+                        "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-t", (PreviewMinutes * 60).ToString(CultureInfo.InvariantCulture), "-i", video.Path,
+                        "-map", "0:" + embeddedStreams.IndexOf(track).ToString(CultureInfo.InvariantCulture), "-c:s", "copy", "-f", "ass", temp
+                    };
+                    var (exitCode, error) = await RunFfmpegAsync(args, cancellationToken, urgent: true).ConfigureAwait(false);
+                    if (exitCode != 0 || !File.Exists(temp))
+                    {
+                        _logger.LogWarning("ASS to SRT: preview extraction failed for {Path}: {Error}", video.Path, error);
+                        continue;
+                    }
+
+                    content = await ReadTextAsync(temp, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    try
+                    {
+                        File.Delete(temp);
+                    }
+                    catch (IOException)
+                    {
+                    }
+                }
+            }
+
+            var events = AssDocument.Parse(content).Where(e => e.Start < PreviewMinutes * 60_000).ToList();
+            result.Add(new PreviewTrack
+            {
+                Title = string.IsNullOrEmpty(track.Title) ? track.Language ?? string.Empty : track.Title,
+                Forced = IsForcedTrack(track),
+                Original = events.Take(80).Select(e => new PreviewLine(e.Start, e.End, e.Kind.ToString(), e.Region.ToString(), e.Column.ToString(), string.Join(" / ", e.PlainText.Split('\n')))).ToList(),
+                Converted = SrtWriter.BuildCues(events, options).Take(80).Select(c => new PreviewCue(c.Start, c.End, c.Row.ToString(), c.Column.ToString(), c.Lines)).ToList()
+            });
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -311,8 +600,9 @@ public sealed partial class AssToSrtConverter : IDisposable
     /// </summary>
     /// <param name="video">The video.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="urgent">Asked by the user or for the next episodes: never paused, only slowed down during playback.</param>
     /// <returns>The number of SRT files created.</returns>
-    public async Task<int> ProcessItemAsync(Video video, CancellationToken cancellationToken)
+    public async Task<int> ProcessItemAsync(Video video, CancellationToken cancellationToken, bool urgent = false)
     {
         if (string.IsNullOrEmpty(video.Path) || video.IsShortcut || !File.Exists(video.Path))
         {
@@ -339,7 +629,7 @@ public sealed partial class AssToSrtConverter : IDisposable
             var embedded = jobs.Where(j => !j.Source.IsExternal).ToList();
             if (embedded.Count > 0)
             {
-                created.AddRange(await ConvertEmbeddedAsync(video, embedded, cancellationToken).ConfigureAwait(false));
+                created.AddRange(await ConvertEmbeddedAsync(video, embedded, cancellationToken, urgent).ConfigureAwait(false));
             }
 
             foreach (var job in jobs.Where(j => j.Source.IsExternal))
@@ -548,7 +838,7 @@ public sealed partial class AssToSrtConverter : IDisposable
     }
 
     // Extracts the ASS tracks as they are (styles and positions included) in a single pass.
-    private async Task<List<string>> ConvertEmbeddedAsync(Video video, List<Job> jobs, CancellationToken cancellationToken)
+    private async Task<List<string>> ConvertEmbeddedAsync(Video video, List<Job> jobs, CancellationToken cancellationToken, bool urgent)
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "jellyfin-asstosrt");
         Directory.CreateDirectory(tempDir);
@@ -563,7 +853,7 @@ public sealed partial class AssToSrtConverter : IDisposable
         var created = new List<string>();
         try
         {
-            var (exitCode, error) = await RunFfmpegAsync(args, cancellationToken).ConfigureAwait(false);
+            var (exitCode, error) = await RunFfmpegAsync(args, cancellationToken, urgent).ConfigureAwait(false);
             if (exitCode != 0)
             {
                 _logger.LogWarning("ASS to SRT: ffmpeg failed on {Path} (code {Code}): {Error}", video.Path, exitCode, error);
@@ -635,7 +925,12 @@ public sealed partial class AssToSrtConverter : IDisposable
         SingleLine = config.SingleLine,
         PreventOverlap = config.PreventOverlap,
         Signs = Enum.TryParse<SignsMode>(config.SignsMode, true, out var signs) ? signs : SignsMode.Top,
-        RemoveSongs = config.RemoveSongs
+        SignColor = config.ColorSigns && Regex.IsMatch(config.SignColor ?? string.Empty, "^#[0-9a-fA-F]{6}$") ? config.SignColor! : string.Empty,
+        RemoveSongs = config.RemoveSongs,
+        MarkSongs = config.MarkSongs,
+        MaxLineLength = Math.Max(0, config.MaxLineLength),
+        MinDurationMs = Math.Max(0, config.MinDurationMs),
+        ShowSpeakerNames = config.ShowSpeakerNames
     };
 
     private async Task<string?> WriteSubtitleAsync(Video video, string fileName, string content, CancellationToken cancellationToken)
@@ -763,8 +1058,28 @@ public sealed partial class AssToSrtConverter : IDisposable
         plugin.SaveConfiguration();
     }
 
-    private async Task<(int ExitCode, string Error)> RunFfmpegAsync(IEnumerable<string> args, CancellationToken cancellationToken)
+    private bool IsPlaybackActive()
+        => _sessionManager.Sessions.Any(s => s.NowPlayingItem is not null);
+
+    private async Task<(int ExitCode, string Error)> RunFfmpegAsync(List<string> args, CancellationToken cancellationToken, bool urgent)
     {
+        // Reading a whole video at full speed can disturb a playback on a small server or a network share.
+        var behavior = Config.PlaybackBehavior;
+        if (!urgent && string.Equals(behavior, "Pause", StringComparison.OrdinalIgnoreCase))
+        {
+            while (IsPlaybackActive())
+            {
+                await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        if (!string.Equals(behavior, "Normal", StringComparison.OrdinalIgnoreCase) && IsPlaybackActive())
+        {
+            // At most 8x the speed of the video.
+            args = args.ToList();
+            args.InsertRange(args.IndexOf("-i"), new[] { "-readrate", "8" });
+        }
+
         var startInfo = new ProcessStartInfo(_mediaEncoder.EncoderPath)
         {
             UseShellExecute = false,

@@ -23,6 +23,21 @@ public enum ScreenRegion
 }
 
 /// <summary>
+/// Horizontal area of the screen a subtitle is displayed in.
+/// </summary>
+public enum ScreenColumn
+{
+    /// <summary>Left of the screen.</summary>
+    Left,
+
+    /// <summary>Center of the screen.</summary>
+    Center,
+
+    /// <summary>Right of the screen.</summary>
+    Right
+}
+
+/// <summary>
 /// What an ASS event is used for.
 /// </summary>
 public enum EventKind
@@ -66,6 +81,12 @@ public sealed class SubtitleEvent
 
     /// <summary>Gets or sets the screen region of the original placement.</summary>
     public ScreenRegion Region { get; set; }
+
+    /// <summary>Gets or sets the horizontal area of the original placement.</summary>
+    public ScreenColumn Column { get; set; } = ScreenColumn.Center;
+
+    /// <summary>Gets or sets the speaker name (ASS "Name" / "Actor" field).</summary>
+    public string Speaker { get; set; } = string.Empty;
 
     /// <summary>Gets the lines of text.</summary>
     public List<List<TextRun>> Lines { get; } = new();
@@ -180,7 +201,12 @@ public static partial class AssDocument
                     playResY = playResX > 0 ? playResX * 3 / 4 : 288;
                 }
 
-                var parsed = ParseEvent(fields, styles, isSsa, playResY, wrapStyle, events.Count);
+                if (playResX <= 0)
+                {
+                    playResX = playResY * 4 / 3;
+                }
+
+                var parsed = ParseEvent(fields, styles, isSsa, playResX, playResY, wrapStyle, events.Count);
                 if (parsed is not null)
                 {
                     events.Add(parsed);
@@ -191,7 +217,7 @@ public static partial class AssDocument
         return events;
     }
 
-    private static SubtitleEvent? ParseEvent(Dictionary<string, string> fields, Dictionary<string, Style> styles, bool isSsa, double playResY, int wrapStyle, int order)
+    private static SubtitleEvent? ParseEvent(Dictionary<string, string> fields, Dictionary<string, Style> styles, bool isSsa, double playResX, double playResY, int wrapStyle, int order)
     {
         var start = ParseTime(Get(fields, "start"));
         var end = ParseTime(Get(fields, "end"));
@@ -212,6 +238,7 @@ public static partial class AssDocument
         var underline = style.Underline;
         var color = style.Color;
         var alignment = style.Alignment;
+        double? posX = null;
         double? posY = null;
         var karaoke = false;
         var drawing = false;
@@ -245,7 +272,7 @@ public static partial class AssDocument
                 Flush();
                 foreach (var tag in SplitTags(text[(i + 1)..close]))
                 {
-                    ApplyTag(tag, style, styles, isSsa, ref italic, ref bold, ref underline, ref color, ref alignment, ref posY, ref karaoke, ref drawing);
+                    ApplyTag(tag, style, styles, ref italic, ref bold, ref underline, ref color, ref alignment, ref posX, ref posY, ref karaoke, ref drawing);
                 }
 
                 i = close;
@@ -310,6 +337,16 @@ public static partial class AssDocument
             ? y < playResY / 3 ? ScreenRegion.Top : y > playResY * 2 / 3 ? ScreenRegion.Bottom : ScreenRegion.Middle
             : alignment >= 7 ? ScreenRegion.Top : alignment >= 4 ? ScreenRegion.Middle : ScreenRegion.Bottom;
 
+        ev.Column = posX is { } x
+            ? x < playResX / 3 ? ScreenColumn.Left : x > playResX * 2 / 3 ? ScreenColumn.Right : ScreenColumn.Center
+            : ((alignment - 1) % 3) switch { 0 => ScreenColumn.Left, 2 => ScreenColumn.Right, _ => ScreenColumn.Center };
+
+        ev.Speaker = Get(fields, "name").Trim();
+        if (ev.Speaker.Length == 0)
+        {
+            ev.Speaker = Get(fields, "actor").Trim();
+        }
+
         return ev;
     }
 
@@ -317,12 +354,12 @@ public static partial class AssDocument
         string tag,
         Style style,
         Dictionary<string, Style> styles,
-        bool isSsa,
         ref bool italic,
         ref bool bold,
         ref bool underline,
         ref string color,
         ref int alignment,
+        ref double? posX,
         ref double? posY,
         ref bool karaoke,
         ref bool drawing)
@@ -332,6 +369,7 @@ public static partial class AssDocument
             var match = Coordinates().Match(tag);
             if (match.Success)
             {
+                posX = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
                 posY = double.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
             }
         }

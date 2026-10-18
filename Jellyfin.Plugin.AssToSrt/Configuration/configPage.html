@@ -6,19 +6,73 @@
 </head>
 <body>
     <div id="AssToSrtConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox,emby-select">
+        <style>
+            #AssToSrtConfigPage .ats-box { padding: .8em 1em; border-left: 4px solid #00a4dc; background: rgba(255,255,255,.05); border-radius: .2em; margin: .5em 0; }
+            #AssToSrtConfigPage .ats-screen { background: #000; color: #fff; text-align: center; padding: 1em; border-radius: .3em; font-size: 1.1em; line-height: 1.5; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+            #AssToSrtConfigPage .ats-row { display: flex; gap: .6em; flex-wrap: wrap; align-items: center; }
+            #AssToSrtConfigPage .ats-row > * { flex: 1 1 12em; }
+            #AssToSrtConfigPage .ats-cols { display: flex; gap: 1em; flex-wrap: wrap; }
+            #AssToSrtConfigPage .ats-cols > div { flex: 1 1 22em; min-width: 0; }
+            #AssToSrtConfigPage .ats-list { max-height: 28em; overflow: auto; font-size: .9em; }
+            #AssToSrtConfigPage .ats-item { padding: .35em .5em; border-bottom: 1px solid rgba(255,255,255,.08); }
+            #AssToSrtConfigPage .ats-time { opacity: .6; font-family: monospace; margin-right: .4em; }
+            #AssToSrtConfigPage .ats-tag { display: inline-block; font-size: .75em; padding: 0 .4em; border-radius: .6em; background: rgba(255,255,255,.12); margin-right: .3em; }
+            #AssToSrtConfigPage .ats-cue { background: #000; color: #fff; padding: .3em .5em; border-radius: .2em; margin-top: .2em; }
+            #AssToSrtConfigPage .ats-results button { margin: .2em .3em .2em 0; }
+        </style>
         <div data-role="content">
             <div class="content-primary">
                 <form id="AssToSrtConfigForm">
                     <div class="verticalSection">
                         <h2 class="sectionTitle">ASS to SRT</h2>
                         <p data-t="intro"></p>
-                        <div id="AssToSrtLastRun" style="padding: .8em 1em; border-left: 4px solid #00a4dc; background: rgba(255,255,255,.05); border-radius: .2em;"></div>
+                        <div id="AssToSrtLastRun" class="ats-box"></div>
+                        <div id="AssToSrtStats" class="ats-box"></div>
                     </div>
 
                     <div class="verticalSection">
                         <h3 class="sectionTitle" data-t="librariesTitle"></h3>
                         <div class="fieldDescription" data-t="librariesHelp"></div>
                         <div id="AssToSrtLibraries" style="padding: .5em 0;"></div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle" data-t="modeTitle"></h3>
+                        <div class="selectContainer">
+                            <select is="emby-select" id="ConversionMode" data-tlabel="mode">
+                                <option value="All" data-t="modeAll"></option>
+                                <option value="Upcoming" data-t="modeUpcoming"></option>
+                            </select>
+                            <div class="fieldDescription" data-t="modeHelp"></div>
+                        </div>
+                        <div class="inputContainer">
+                            <input is="emby-input" type="number" min="0" max="20" id="UpcomingCount" data-tlabel="upcomingCount" />
+                            <div class="fieldDescription" data-t="upcomingHelp"></div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="AutoConvertNewItems" /><span data-t="auto"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="autoHelp"></div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle" data-t="perfTitle"></h3>
+                        <div class="selectContainer">
+                            <select is="emby-select" id="PlaybackBehavior" data-tlabel="playback">
+                                <option value="Slow" data-t="playbackSlow"></option>
+                                <option value="Pause" data-t="playbackPause"></option>
+                                <option value="Normal" data-t="playbackNormal"></option>
+                            </select>
+                            <div class="fieldDescription" data-t="playbackHelp"></div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="UseTimeWindow" /><span data-t="window"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="windowHelp"></div>
+                        </div>
+                        <div class="ats-row">
+                            <div class="selectContainer"><select is="emby-select" id="WindowStartHour" class="atsHour" data-tlabel="windowStart"></select></div>
+                            <div class="selectContainer"><select is="emby-select" id="WindowEndHour" class="atsHour" data-tlabel="windowEnd"></select></div>
+                        </div>
                     </div>
 
                     <div class="verticalSection">
@@ -40,41 +94,81 @@
                     <div class="verticalSection">
                         <h3 class="sectionTitle" data-t="layoutTitle"></h3>
                         <div class="checkboxContainer checkboxContainer-withDescription">
-                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="PreventOverlap" class="assToSrtStyle" /><span data-t="overlap"></span></label>
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="PreventOverlap" class="atsStyle" /><span data-t="overlap"></span></label>
                             <div class="fieldDescription checkboxFieldDescription" data-t="overlapHelp"></div>
                         </div>
                         <div class="selectContainer">
-                            <select is="emby-select" id="SignsMode" class="assToSrtStyle" data-tlabel="signsMode">
+                            <select is="emby-select" id="SignsMode" class="atsStyle" data-tlabel="signsMode">
                                 <option value="Top" data-t="signsTop"></option>
                                 <option value="Original" data-t="signsOriginal"></option>
                                 <option value="Remove" data-t="signsRemove"></option>
                             </select>
                             <div class="fieldDescription" data-t="signsModeHelp"></div>
                         </div>
+                        <div class="ats-row">
+                            <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="ColorSigns" class="atsStyle" /><span data-t="colorSigns"></span></label></div>
+                            <div class="inputContainer"><input is="emby-input" type="color" id="SignColor" class="atsStyle" data-tlabel="signColor" style="height: 2.5em;" /></div>
+                        </div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="MarkSongs" class="atsStyle" /><span data-t="markSongs"></span></label></div>
                         <div class="checkboxContainer checkboxContainer-withDescription">
-                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="RemoveSongs" /><span data-t="songs"></span></label>
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="RemoveSongs" class="atsStyle" /><span data-t="songs"></span></label>
                             <div class="fieldDescription checkboxFieldDescription" data-t="songsHelp"></div>
                         </div>
                     </div>
 
                     <div class="verticalSection">
                         <h3 class="sectionTitle" data-t="styleTitle"></h3>
-                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepItalic" class="assToSrtStyle" /><span data-t="italic"></span></label></div>
-                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepBold" class="assToSrtStyle" /><span data-t="bold"></span></label></div>
-                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepUnderline" class="assToSrtStyle" /><span data-t="underline"></span></label></div>
-                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepColors" class="assToSrtStyle" /><span data-t="colors"></span></label></div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepItalic" class="atsStyle" /><span data-t="italic"></span></label></div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepBold" class="atsStyle" /><span data-t="bold"></span></label></div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepUnderline" class="atsStyle" /><span data-t="underline"></span></label></div>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepColors" class="atsStyle" /><span data-t="colors"></span></label></div>
                         <div class="checkboxContainer checkboxContainer-withDescription">
-                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepPositions" class="assToSrtStyle" /><span data-t="positions"></span></label>
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="KeepPositions" class="atsStyle" /><span data-t="positions"></span></label>
                             <div class="fieldDescription checkboxFieldDescription" data-t="positionsHelp"></div>
                         </div>
                         <div class="checkboxContainer checkboxContainer-withDescription">
-                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="SingleLine" class="assToSrtStyle" /><span data-t="singleLine"></span></label>
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="SingleLine" class="atsStyle" /><span data-t="singleLine"></span></label>
                             <div class="fieldDescription checkboxFieldDescription" data-t="singleLineHelp"></div>
+                        </div>
+                        <div class="ats-row">
+                            <div class="inputContainer">
+                                <input is="emby-input" type="number" min="0" max="200" id="MaxLineLength" class="atsStyle" data-tlabel="maxLine" />
+                                <div class="fieldDescription" data-t="maxLineHelp"></div>
+                            </div>
+                            <div class="selectContainer">
+                                <select is="emby-select" id="MinDurationMs" data-tlabel="minDuration">
+                                    <option value="0" data-t="minDurationOff"></option>
+                                    <option value="700">0.7 s</option>
+                                    <option value="1000">1 s</option>
+                                    <option value="1500">1.5 s</option>
+                                    <option value="2000">2 s</option>
+                                </select>
+                                <div class="fieldDescription" data-t="minDurationHelp"></div>
+                            </div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="ShowSpeakerNames" class="atsStyle" /><span data-t="speakers"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="speakersHelp"></div>
                         </div>
 
                         <div class="fieldDescription" style="margin-top: 1em;" data-t="previewTitle"></div>
-                        <div id="AssToSrtPreview" style="background: #000; color: #fff; text-align: center; padding: 1.2em 1em; margin: .5em 0 1em; border-radius: .3em; font-size: 1.15em; line-height: 1.5; text-shadow: 0 0 3px #000, 0 0 3px #000;"></div>
+                        <div id="AssToSrtPreview" class="ats-screen" style="margin: .5em 0 1em;"></div>
                         <div class="fieldDescription" data-t="appearanceHelp"></div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle" data-t="realTitle"></h3>
+                        <div class="fieldDescription" data-t="realHelp"></div>
+                        <div class="inputContainer">
+                            <input is="emby-input" type="text" id="AssToSrtSearch" data-tlabel="search" autocomplete="off" />
+                        </div>
+                        <div id="AssToSrtResults" class="ats-results"></div>
+                        <div id="AssToSrtSelected" class="ats-box" style="display: none;"></div>
+                        <div class="ats-row">
+                            <button is="emby-button" type="button" id="AssToSrtPreviewBtn" class="raised emby-button" disabled><span data-t="previewBtn"></span></button>
+                            <button is="emby-button" type="button" id="AssToSrtConvertBtn" class="raised emby-button" disabled><span data-t="convertBtn"></span></button>
+                        </div>
+                        <div id="AssToSrtRealPreview"></div>
                     </div>
 
                     <div class="verticalSection">
@@ -94,10 +188,11 @@
                     </div>
 
                     <div class="verticalSection">
-                        <h3 class="sectionTitle" data-t="autoTitle"></h3>
+                        <h3 class="sectionTitle" data-t="otherTitle"></h3>
+                        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="LogActivity" /><span data-t="logActivity"></span></label></div>
                         <div class="checkboxContainer checkboxContainer-withDescription">
-                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="AutoConvertNewItems" /><span data-t="auto"></span></label>
-                            <div class="fieldDescription checkboxFieldDescription" data-t="autoHelp"></div>
+                            <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="CleanupOnRemove" /><span data-t="cleanup"></span></label>
+                            <div class="fieldDescription checkboxFieldDescription" data-t="cleanupHelp"></div>
                         </div>
                     </div>
 
@@ -116,128 +211,322 @@
                 var pluginId = '5c2f7686-19c5-4ab1-b47a-6acdef57ccbd';
                 var checkboxes = ['AutoConvertNewItems', 'ConvertForcedTracks', 'SkipSignsAndSongs', 'UseTrackTitle',
                     'KeepItalic', 'KeepBold', 'KeepUnderline', 'KeepColors', 'KeepPositions', 'SingleLine',
-                    'PreventOverlap', 'RemoveSongs', 'HideConvertedAss'];
+                    'PreventOverlap', 'RemoveSongs', 'HideConvertedAss', 'ColorSigns', 'MarkSongs', 'ShowSpeakerNames',
+                    'UseTimeWindow', 'LogActivity', 'CleanupOnRemove'];
+                var selects = ['SignsMode', 'ConversionMode', 'PlaybackBehavior', 'WindowStartHour', 'WindowEndHour', 'MinDurationMs'];
+                var numbers = ['UpcomingCount', 'MaxLineLength'];
                 var videoTypes = [undefined, null, 'movies', 'tvshows', 'homevideos', 'musicvideos', 'mixed'];
                 var page = document.querySelector('#AssToSrtConfigPage');
+                var selectedItem = null;
 
                 var texts = {
                     en: {
                         intro: 'Creates an SRT copy of ASS/SSA subtitles so that clients which cannot display ASS (Android TV, Fire TV, Roku...) play the video directly instead of asking the server to burn the subtitles in. The ASS tracks are kept: an SRT is only added.',
-                        librariesTitle: 'Libraries',
-                        librariesHelp: 'Check the libraries that contain videos with ASS subtitles (usually your anime). Leave everything unchecked to process every video library.',
                         lastRun: 'Last full conversion: {date} — libraries: {libraries} — {checked} videos checked, {converted} converted ({created} SRT files), {errors} errors.',
-                        lastRunNever: 'No full conversion yet: click "Save and convert now" or wait for the nightly task (4:00).',
-                        lastRunNoLibrary: 'none',
+                        lastRunNever: 'No full conversion yet.', lastRunNoLibrary: 'none',
+                        stats: '{srt} SRT files for {videos} videos ({size}) — ASS hidden for {hidden} videos — {queued} waiting.',
+                        librariesTitle: 'Libraries', librariesHelp: 'Check the libraries that contain videos with ASS subtitles (usually your anime). Leave everything unchecked to process every video library.',
+                        modeTitle: 'Conversion mode', mode: 'Mode', modeAll: 'Convert everything (nightly task and new videos)', modeUpcoming: 'Only prepare the next episodes',
+                        modeHelp: 'In both modes, when you start an episode, it and the next ones are converted first.',
+                        upcomingCount: 'Episodes to prepare ahead', upcomingHelp: 'How many following episodes are converted when you start an episode.',
+                        auto: 'Convert new videos automatically', autoHelp: '"Convert everything" mode: a video added or refreshed is converted about a minute later.',
+                        perfTitle: 'Server load',
+                        playback: 'While a video is playing', playbackSlow: 'Convert slowly (recommended)', playbackPause: 'Wait until playback stops', playbackNormal: 'Do not change anything',
+                        playbackHelp: 'Converting reads the whole video file: slowing down avoids stutters on small servers or network shares. The episodes you are about to watch are never paused, only slowed down.',
+                        window: 'Limit background conversions to a time window', windowHelp: 'Applies to the nightly task and to new videos. Episodes you watch, series you ask for and the buttons below are not limited.',
+                        windowStart: 'From', windowEnd: 'To',
                         tracksTitle: 'Subtitles to convert',
-                        forced: 'Convert forced tracks',
-                        forcedHelp: 'Forced tracks only translate foreign-language lines and signs. They become ".forced.srt" files.',
-                        signs: 'Skip "Signs / Songs" tracks',
-                        signsHelp: 'These tracks only translate on-screen signs and songs and rely on ASS positioning: they are rarely useful as SRT.',
-                        languages: 'Languages to convert',
-                        languagesHelp: 'Comma separated, e.g. "fr, en". Leave empty to convert every language.',
+                        forced: 'Convert forced tracks', forcedHelp: 'Forced tracks only translate foreign-language lines and signs. They become ".forced.srt" files.',
+                        signs: 'Skip "Signs / Songs" tracks', signsHelp: 'Tracks that only contain signs and songs (by their name).',
+                        languages: 'Languages to convert', languagesHelp: 'Comma separated, e.g. "fr, en". Empty: every language.',
                         layoutTitle: 'Layout',
-                        overlap: 'Prevent overlapping subtitles',
-                        overlapHelp: 'Subtitles shown at the same time in the same area of the screen are stacked in one block instead of being drawn on top of each other.',
-                        signsMode: 'On-screen text (signs, titles, messages)',
-                        signsTop: 'At the top of the screen',
-                        signsOriginal: 'At their original place (top, middle or bottom)',
-                        signsRemove: 'Remove them',
-                        signsModeHelp: 'Many anime subtitles also translate the text shown in the picture. In SRT they cannot follow the picture: by default they go to the top, away from the dialogue.',
-                        songs: 'Remove song lyrics',
-                        songsHelp: 'Lines of the opening, ending, insert songs and karaoke.',
-                        hideTitle: 'Original ASS tracks',
-                        hide: 'Hide the converted ASS tracks (experimental)',
-                        hideHelp: 'Removes the ASS tracks that have an SRT copy from the subtitle menus. Your video files are not modified: uncheck it to show them again. Only possible when the ASS tracks are the last tracks of the file (most anime). Deleting them for good would require rewriting every video file, which the plugin never does.',
+                        overlap: 'Prevent overlapping subtitles', overlapHelp: 'Subtitles shown at the same time in the same row of the screen are stacked in one block instead of being drawn on top of each other.',
+                        signsMode: 'On-screen text (signs, titles, messages)', signsTop: 'At the top of the screen', signsOriginal: 'At their original place (9 positions)', signsRemove: 'Remove them',
+                        signsModeHelp: 'SRT cannot follow the picture: by default, translated signs go to the top, away from the dialogue.',
+                        colorSigns: 'Color the on-screen text', signColor: 'Color',
+                        markSongs: 'Mark song lyrics with ♪', songs: 'Remove song lyrics', songsHelp: 'Lines of the opening, ending, insert songs and karaoke.',
                         styleTitle: 'Appearance',
-                        italic: 'Keep italic',
-                        bold: 'Keep bold',
-                        underline: 'Keep underline',
-                        colors: 'Keep text colors',
-                        positions: 'Keep positions',
-                        positionsHelp: 'Lines placed at the top of the screen in the ASS (to avoid hiding on-screen text) stay at the top.',
-                        singleLine: 'One line per sentence',
-                        singleLineHelp: 'Joins the lines of a subtitle into a single line. Dialogue lines starting with a dash stay separate.',
-                        previewTitle: 'Preview (example subtitle):',
-                        appearanceHelp: 'Outline, shadow, font, size and background cannot be stored in an SRT file: every Jellyfin app applies its own. Change them in the subtitle settings of your app (TV: app settings > subtitles; web: user settings > Subtitles).',
-                        namingTitle: 'Track name',
-                        trackTitle: 'Use the original track name',
-                        trackTitleHelp: '"FR Full [ASS] - Crunchyroll" becomes "FR Full [SRT] - Crunchyroll" in the subtitle menu. Unchecked: only the language is shown. Jellyfin hides names containing "forced".',
-                        autoTitle: 'Automatic conversion',
-                        auto: 'Convert new videos automatically',
-                        autoHelp: 'A video added or refreshed is converted about a minute later. Otherwise the conversion only runs with the scheduled task (every night at 4:00) or the buttons below.',
-                        save: 'Save',
-                        runNow: 'Save and convert now',
-                        regenerate: 'Save and regenerate existing SRT',
-                        regenerateHelp: '"Regenerate" deletes the SRT files created by this plugin in the checked libraries and creates them again with the settings above. SRT files you added yourself are never touched.',
-                        started: 'Started. Follow the progress in Dashboard > Scheduled Tasks.',
-                        failed: 'Could not start the task. Run it from Dashboard > Scheduled Tasks.',
-                        confirmRegenerate: 'Delete the SRT files created by ASS to SRT and create them again with these settings?',
-                        sample1: 'Live house Starry',
-                        sample2: 'I can\'t believe that we are',
-                        sample3: 'going to play on stage tonight...'
+                        italic: 'Keep italic', bold: 'Keep bold', underline: 'Keep underline', colors: 'Keep text colors',
+                        positions: 'Keep positions', positionsHelp: 'Unchecked: everything goes to the bottom center of the screen.',
+                        singleLine: 'Join the lines of a subtitle', singleLineHelp: 'Dialogue lines starting with a dash stay separate.',
+                        maxLine: 'Maximum characters per line', maxLineHelp: 'Long lines are split into balanced lines. 0: keep the lines as they are.',
+                        minDuration: 'Minimum display time', minDurationOff: 'Original timing', minDurationHelp: 'Very short subtitles stay a little longer, without overlapping the next one.',
+                        speakers: 'Show the speaker name', speakersHelp: '"Hitori: ..." when the subtitle file gives the name (many fansubs do, official subtitles rarely).',
+                        previewTitle: 'Preview (example):',
+                        appearanceHelp: 'Outline, shadow, font, size and background cannot be stored in an SRT file: change them in the subtitle settings of your Jellyfin app.',
+                        sample1: 'Live house Starry', sample2: 'I can\'t believe that we are', sample3: 'going to play on stage tonight...', sampleSong: 'I run towards the light',
+                        realTitle: 'Preview and convert a series', realHelp: 'Search a series, an episode or a movie: preview the conversion of its first minutes with the settings above (nothing is saved), or convert it right away.',
+                        search: 'Search', previewBtn: 'Preview', convertBtn: 'Convert now',
+                        previewLoading: 'Reading the subtitles (can take a few seconds)...', previewNone: 'No ASS subtitles in this video.', previewError: 'The preview failed.',
+                        original: 'Original ASS', converted: 'Converted SRT', queued: '{n} videos added to the queue.',
+                        Dialogue: 'dialogue', Sign: 'sign', Song: 'song', Top: 'top', Middle: 'middle', Bottom: 'bottom', Left: 'left', Center: 'center', Right: 'right',
+                        hideTitle: 'Original ASS tracks', hide: 'Hide the converted ASS tracks (experimental)',
+                        hideHelp: 'Removes the ASS tracks that have an SRT copy from the subtitle menus. Video files are not modified: uncheck to show them again. Only possible when the ASS tracks are the last tracks of the file (most anime).',
+                        namingTitle: 'Track name', trackTitle: 'Use the original track name', trackTitleHelp: '"FR Full [ASS] - Crunchyroll" becomes "FR Full [SRT] - Crunchyroll". Jellyfin hides names containing "forced".',
+                        otherTitle: 'Other', logActivity: 'Report conversions in the Jellyfin activity log',
+                        cleanup: 'Delete the SRT files of removed videos', cleanupHelp: 'Only the SRT files created by this plugin.',
+                        save: 'Save', runNow: 'Save and convert everything now', regenerate: 'Save and regenerate existing SRT',
+                        regenerateHelp: '"Regenerate" deletes the SRT files created by this plugin in the checked libraries and creates them again with these settings. SRT files you added yourself are never touched.',
+                        started: 'Started. Follow the progress in Dashboard > Scheduled Tasks.', failed: 'The action failed.',
+                        confirmRegenerate: 'Delete the SRT files created by ASS to SRT and create them again with these settings?'
                     },
                     fr: {
                         intro: 'Crée une copie SRT des sous-titres ASS/SSA pour que les applis qui ne savent pas afficher l\'ASS (Android TV, Fire TV, Roku...) lisent la vidéo directement, au lieu de demander au serveur d\'incruster les sous-titres. Les pistes ASS sont conservées : un SRT est seulement ajouté.',
-                        librariesTitle: 'Médiathèques',
-                        librariesHelp: 'Coche les médiathèques qui contiennent des vidéos avec des sous-titres ASS (en général tes animes). Ne coche rien pour traiter toutes les médiathèques vidéo.',
                         lastRun: 'Dernière conversion complète : {date} — médiathèques : {libraries} — {checked} vidéos vérifiées, {converted} converties ({created} fichiers SRT), {errors} erreurs.',
-                        lastRunNever: 'Aucune conversion complète pour l\'instant : clique sur « Enregistrer et convertir maintenant » ou attends la tâche de la nuit (4 h).',
-                        lastRunNoLibrary: 'aucune',
+                        lastRunNever: 'Aucune conversion complète pour l\'instant.', lastRunNoLibrary: 'aucune',
+                        stats: '{srt} fichiers SRT pour {videos} vidéos ({size}) — ASS masqués pour {hidden} vidéos — {queued} en attente.',
+                        librariesTitle: 'Médiathèques', librariesHelp: 'Coche les médiathèques qui contiennent des vidéos avec des sous-titres ASS (en général tes animes). Ne coche rien pour traiter toutes les médiathèques vidéo.',
+                        modeTitle: 'Mode de conversion', mode: 'Mode', modeAll: 'Tout convertir (tâche de nuit et nouvelles vidéos)', modeUpcoming: 'Préparer seulement les prochains épisodes',
+                        modeHelp: 'Dans les deux modes, quand tu lances un épisode, il est converti en priorité avec les suivants.',
+                        upcomingCount: 'Épisodes à préparer à l\'avance', upcomingHelp: 'Combien d\'épisodes suivants sont convertis quand tu lances un épisode.',
+                        auto: 'Convertir automatiquement les nouvelles vidéos', autoHelp: 'Mode « Tout convertir » : une vidéo ajoutée ou actualisée est convertie environ une minute après.',
+                        perfTitle: 'Charge du serveur',
+                        playback: 'Pendant la lecture d\'une vidéo', playbackSlow: 'Convertir doucement (conseillé)', playbackPause: 'Attendre la fin de la lecture', playbackNormal: 'Ne rien changer',
+                        playbackHelp: 'Convertir lit tout le fichier vidéo : ralentir évite les saccades sur un petit serveur ou un disque réseau. Les épisodes que tu vas regarder ne sont jamais mis en pause, seulement ralentis.',
+                        window: 'Limiter les conversions en arrière-plan à une plage horaire', windowHelp: 'S\'applique à la tâche de nuit et aux nouvelles vidéos. Les épisodes que tu regardes, les séries demandées et les boutons ci-dessous ne sont pas limités.',
+                        windowStart: 'De', windowEnd: 'À',
                         tracksTitle: 'Sous-titres à convertir',
-                        forced: 'Convertir les pistes forcées',
-                        forcedHelp: 'Les pistes forcées ne traduisent que les passages en langue étrangère et les panneaux. Elles deviennent des fichiers ".forced.srt".',
-                        signs: 'Ignorer les pistes « Signs / Songs »',
-                        signsHelp: 'Ces pistes ne traduisent que les panneaux et les chansons et dépendent du placement ASS : elles sont rarement utiles en SRT.',
-                        languages: 'Langues à convertir',
-                        languagesHelp: 'Séparées par des virgules, ex. "fr, en". Laisse vide pour convertir toutes les langues.',
+                        forced: 'Convertir les pistes forcées', forcedHelp: 'Les pistes forcées ne traduisent que les passages en langue étrangère et les panneaux. Elles deviennent des fichiers ".forced.srt".',
+                        signs: 'Ignorer les pistes « Signs / Songs »', signsHelp: 'Les pistes qui ne contiennent que des panneaux et des chansons (d\'après leur nom).',
+                        languages: 'Langues à convertir', languagesHelp: 'Séparées par des virgules, ex. "fr, en". Vide : toutes les langues.',
                         layoutTitle: 'Mise en page',
-                        overlap: 'Empêcher les sous-titres de se chevaucher',
-                        overlapHelp: 'Les sous-titres affichés en même temps dans la même zone de l\'écran sont empilés dans un seul bloc au lieu d\'être dessinés les uns sur les autres.',
-                        signsMode: 'Textes à l\'écran (panneaux, titres, messages)',
-                        signsTop: 'En haut de l\'écran',
-                        signsOriginal: 'À leur place d\'origine (haut, milieu ou bas)',
-                        signsRemove: 'Les supprimer',
-                        signsModeHelp: 'Beaucoup de sous-titres d\'animes traduisent aussi le texte visible à l\'image. En SRT, ils ne peuvent pas suivre l\'image : par défaut ils vont en haut, loin des dialogues.',
-                        songs: 'Supprimer les paroles des chansons',
-                        songsHelp: 'Les lignes de l\'opening, de l\'ending, des chansons et du karaoké.',
-                        hideTitle: 'Pistes ASS d\'origine',
-                        hide: 'Masquer les pistes ASS converties (expérimental)',
-                        hideHelp: 'Retire des menus de sous-titres les pistes ASS qui ont une copie SRT. Tes fichiers vidéo ne sont pas modifiés : décoche pour les faire réapparaître. Possible seulement quand les pistes ASS sont les dernières pistes du fichier (la plupart des animes). Les supprimer pour de bon obligerait à réécrire chaque fichier vidéo, ce que le plugin ne fait jamais.',
+                        overlap: 'Empêcher les sous-titres de se chevaucher', overlapHelp: 'Les sous-titres affichés en même temps sur la même ligne de l\'écran sont empilés dans un seul bloc au lieu d\'être dessinés les uns sur les autres.',
+                        signsMode: 'Textes à l\'écran (panneaux, titres, messages)', signsTop: 'En haut de l\'écran', signsOriginal: 'À leur place d\'origine (9 positions)', signsRemove: 'Les supprimer',
+                        signsModeHelp: 'Le SRT ne peut pas suivre l\'image : par défaut, les panneaux traduits vont en haut, loin des dialogues.',
+                        colorSigns: 'Colorer les textes à l\'écran', signColor: 'Couleur',
+                        markSongs: 'Marquer les paroles des chansons avec ♪', songs: 'Supprimer les paroles des chansons', songsHelp: 'Les lignes de l\'opening, de l\'ending, des chansons et du karaoké.',
                         styleTitle: 'Apparence',
-                        italic: 'Garder l\'italique',
-                        bold: 'Garder le gras',
-                        underline: 'Garder le soulignement',
-                        colors: 'Garder les couleurs du texte',
-                        positions: 'Garder les positions',
-                        positionsHelp: 'Les répliques placées en haut de l\'écran dans l\'ASS (pour ne pas cacher un texte à l\'image) restent en haut.',
-                        singleLine: 'Une seule ligne par réplique',
-                        singleLineHelp: 'Met le texte d\'un sous-titre sur une seule ligne. Les répliques de dialogue qui commencent par un tiret restent séparées.',
-                        previewTitle: 'Aperçu (sous-titre d\'exemple) :',
-                        appearanceHelp: 'Le contour, l\'ombre, la police, la taille et le fond ne peuvent pas être enregistrés dans un fichier SRT : chaque appli Jellyfin applique les siens. Change-les dans les réglages de sous-titres de ton appli (TV : paramètres de l\'appli > sous-titres ; web : paramètres utilisateur > Sous-titres).',
-                        namingTitle: 'Nom des pistes',
-                        trackTitle: 'Garder le nom d\'origine de la piste',
-                        trackTitleHelp: '"FR Full [ASS] - Crunchyroll" devient "FR Full [SRT] - Crunchyroll" dans le menu des sous-titres. Décoché : seule la langue est affichée. Jellyfin masque les noms qui contiennent "forced".',
-                        autoTitle: 'Conversion automatique',
-                        auto: 'Convertir automatiquement les nouvelles vidéos',
-                        autoHelp: 'Une vidéo ajoutée ou actualisée est convertie environ une minute après. Sinon, la conversion se fait seulement avec la tâche planifiée (chaque nuit à 4 h) ou les boutons ci-dessous.',
-                        save: 'Enregistrer',
-                        runNow: 'Enregistrer et convertir maintenant',
-                        regenerate: 'Enregistrer et régénérer les SRT existants',
-                        regenerateHelp: '« Régénérer » supprime les SRT créés par ce plugin dans les médiathèques cochées et les recrée avec les réglages ci-dessus. Les SRT que tu as ajoutés toi-même ne sont jamais touchés.',
-                        started: 'C\'est parti. Suis l\'avancement dans Tableau de bord > Tâches planifiées.',
-                        failed: 'Impossible de lancer la tâche. Lance-la depuis Tableau de bord > Tâches planifiées.',
-                        confirmRegenerate: 'Supprimer les SRT créés par ASS to SRT et les recréer avec ces réglages ?',
-                        sample1: 'Live house Starry',
-                        sample2: 'J\'arrive pas à croire qu\'on va',
-                        sample3: 'jouer sur scène ce soir...'
+                        italic: 'Garder l\'italique', bold: 'Garder le gras', underline: 'Garder le soulignement', colors: 'Garder les couleurs du texte',
+                        positions: 'Garder les positions', positionsHelp: 'Décoché : tout va en bas au centre de l\'écran.',
+                        singleLine: 'Réunir les lignes d\'un sous-titre', singleLineHelp: 'Les répliques qui commencent par un tiret restent séparées.',
+                        maxLine: 'Caractères maximum par ligne', maxLineHelp: 'Les lignes trop longues sont coupées en lignes équilibrées. 0 : garder les lignes telles quelles.',
+                        minDuration: 'Durée d\'affichage minimale', minDurationOff: 'Durée d\'origine', minDurationHelp: 'Les sous-titres très courts restent un peu plus longtemps, sans empiéter sur le suivant.',
+                        speakers: 'Afficher le nom du personnage', speakersHelp: '« Hitori : ... » quand le fichier de sous-titres donne le nom (souvent les fansubs, rarement les sous-titres officiels).',
+                        previewTitle: 'Aperçu (exemple) :',
+                        appearanceHelp: 'Le contour, l\'ombre, la police, la taille et le fond ne peuvent pas être enregistrés dans un SRT : change-les dans les réglages de sous-titres de ton appli Jellyfin.',
+                        sample1: 'Live house Starry', sample2: 'J\'arrive pas à croire qu\'on va', sample3: 'jouer sur scène ce soir...', sampleSong: 'Je cours vers la lumière',
+                        realTitle: 'Aperçu et conversion d\'une série', realHelp: 'Cherche une série, un épisode ou un film : vois la conversion de ses premières minutes avec les réglages ci-dessus (rien n\'est enregistré), ou convertis-le tout de suite.',
+                        search: 'Rechercher', previewBtn: 'Aperçu', convertBtn: 'Convertir maintenant',
+                        previewLoading: 'Lecture des sous-titres (quelques secondes)...', previewNone: 'Pas de sous-titres ASS dans cette vidéo.', previewError: 'L\'aperçu a échoué.',
+                        original: 'ASS d\'origine', converted: 'SRT converti', queued: '{n} vidéos ajoutées à la file d\'attente.',
+                        Dialogue: 'dialogue', Sign: 'panneau', Song: 'chanson', Top: 'haut', Middle: 'milieu', Bottom: 'bas', Left: 'gauche', Center: 'centre', Right: 'droite',
+                        hideTitle: 'Pistes ASS d\'origine', hide: 'Masquer les pistes ASS converties (expérimental)',
+                        hideHelp: 'Retire des menus de sous-titres les pistes ASS qui ont une copie SRT. Les vidéos ne sont pas modifiées : décoche pour les faire réapparaître. Possible seulement quand les pistes ASS sont les dernières du fichier (la plupart des animes).',
+                        namingTitle: 'Nom des pistes', trackTitle: 'Garder le nom d\'origine de la piste', trackTitleHelp: '"FR Full [ASS] - Crunchyroll" devient "FR Full [SRT] - Crunchyroll". Jellyfin masque les noms qui contiennent "forced".',
+                        otherTitle: 'Autres', logActivity: 'Signaler les conversions dans le journal d\'activité de Jellyfin',
+                        cleanup: 'Supprimer les SRT des vidéos supprimées', cleanupHelp: 'Seulement les SRT créés par ce plugin.',
+                        save: 'Enregistrer', runNow: 'Enregistrer et tout convertir maintenant', regenerate: 'Enregistrer et régénérer les SRT existants',
+                        regenerateHelp: '« Régénérer » supprime les SRT créés par ce plugin dans les médiathèques cochées et les recrée avec ces réglages. Les SRT que tu as ajoutés toi-même ne sont jamais touchés.',
+                        started: 'C\'est parti. Suis l\'avancement dans Tableau de bord > Tâches planifiées.', failed: 'L\'action a échoué.',
+                        confirmRegenerate: 'Supprimer les SRT créés par ASS to SRT et les recréer avec ces réglages ?'
+                    },
+                    es: {
+                        intro: 'Crea una copia SRT de los subtítulos ASS/SSA para que las apps que no pueden mostrar ASS (Android TV, Fire TV, Roku...) reproduzcan el vídeo directamente en lugar de pedir al servidor que incruste los subtítulos. Las pistas ASS se conservan: solo se añade un SRT.',
+                        lastRun: 'Última conversión completa: {date} — bibliotecas: {libraries} — {checked} vídeos revisados, {converted} convertidos ({created} archivos SRT), {errors} errores.',
+                        lastRunNever: 'Todavía no hay conversión completa.', lastRunNoLibrary: 'ninguna',
+                        stats: '{srt} archivos SRT para {videos} vídeos ({size}) — ASS ocultos en {hidden} vídeos — {queued} en espera.',
+                        librariesTitle: 'Bibliotecas', librariesHelp: 'Marca las bibliotecas con vídeos que tienen subtítulos ASS (normalmente tu anime). Sin marcar nada se procesan todas las bibliotecas de vídeo.',
+                        modeTitle: 'Modo de conversión', mode: 'Modo', modeAll: 'Convertir todo (tarea nocturna y vídeos nuevos)', modeUpcoming: 'Preparar solo los próximos episodios',
+                        modeHelp: 'En ambos modos, al empezar un episodio, este y los siguientes se convierten primero.',
+                        upcomingCount: 'Episodios a preparar por adelantado', upcomingHelp: 'Cuántos episodios siguientes se convierten al empezar un episodio.',
+                        auto: 'Convertir automáticamente los vídeos nuevos', autoHelp: 'Modo «Convertir todo»: un vídeo añadido o actualizado se convierte un minuto después.',
+                        perfTitle: 'Carga del servidor',
+                        playback: 'Mientras se reproduce un vídeo', playbackSlow: 'Convertir despacio (recomendado)', playbackPause: 'Esperar al final de la reproducción', playbackNormal: 'No cambiar nada',
+                        playbackHelp: 'Convertir lee todo el archivo de vídeo: ir despacio evita cortes en servidores pequeños o discos de red. Los episodios que vas a ver nunca se pausan, solo se ralentizan.',
+                        window: 'Limitar las conversiones en segundo plano a un horario', windowHelp: 'Se aplica a la tarea nocturna y a los vídeos nuevos. Los episodios que ves, las series pedidas y los botones de abajo no tienen límite.',
+                        windowStart: 'Desde', windowEnd: 'Hasta',
+                        tracksTitle: 'Subtítulos a convertir',
+                        forced: 'Convertir las pistas forzadas', forcedHelp: 'Las pistas forzadas solo traducen frases en otro idioma y carteles. Se convierten en archivos ".forced.srt".',
+                        signs: 'Ignorar las pistas «Signs / Songs»', signsHelp: 'Pistas que solo contienen carteles y canciones (según su nombre).',
+                        languages: 'Idiomas a convertir', languagesHelp: 'Separados por comas, p. ej. "es, en". Vacío: todos los idiomas.',
+                        layoutTitle: 'Disposición',
+                        overlap: 'Evitar que los subtítulos se superpongan', overlapHelp: 'Los subtítulos mostrados a la vez en la misma fila de la pantalla se apilan en un solo bloque.',
+                        signsMode: 'Texto en pantalla (carteles, títulos, mensajes)', signsTop: 'Arriba de la pantalla', signsOriginal: 'En su lugar original (9 posiciones)', signsRemove: 'Eliminarlos',
+                        signsModeHelp: 'El SRT no puede seguir la imagen: por defecto, los carteles traducidos van arriba, lejos de los diálogos.',
+                        colorSigns: 'Colorear el texto en pantalla', signColor: 'Color',
+                        markSongs: 'Marcar las letras de canciones con ♪', songs: 'Eliminar las letras de canciones', songsHelp: 'Líneas del opening, ending, canciones y karaoke.',
+                        styleTitle: 'Apariencia',
+                        italic: 'Mantener la cursiva', bold: 'Mantener la negrita', underline: 'Mantener el subrayado', colors: 'Mantener los colores del texto',
+                        positions: 'Mantener las posiciones', positionsHelp: 'Sin marcar: todo va abajo en el centro.',
+                        singleLine: 'Unir las líneas de un subtítulo', singleLineHelp: 'Las líneas de diálogo que empiezan con guion quedan separadas.',
+                        maxLine: 'Máximo de caracteres por línea', maxLineHelp: 'Las líneas largas se dividen en líneas equilibradas. 0: mantener las líneas.',
+                        minDuration: 'Duración mínima en pantalla', minDurationOff: 'Duración original', minDurationHelp: 'Los subtítulos muy cortos se quedan un poco más, sin pisar el siguiente.',
+                        speakers: 'Mostrar el nombre del personaje', speakersHelp: '«Hitori: ...» cuando el archivo indica el nombre (frecuente en fansubs).',
+                        previewTitle: 'Vista previa (ejemplo):',
+                        appearanceHelp: 'El contorno, la sombra, la fuente, el tamaño y el fondo no se pueden guardar en un SRT: cámbialos en los ajustes de subtítulos de tu app Jellyfin.',
+                        sample1: 'Live house Starry', sample2: 'No puedo creer que esta noche', sample3: 'vamos a tocar en el escenario...', sampleSong: 'Corro hacia la luz',
+                        realTitle: 'Vista previa y conversión de una serie', realHelp: 'Busca una serie, un episodio o una película: mira la conversión de sus primeros minutos con estos ajustes (no se guarda nada), o conviértela ya.',
+                        search: 'Buscar', previewBtn: 'Vista previa', convertBtn: 'Convertir ahora',
+                        previewLoading: 'Leyendo los subtítulos (unos segundos)...', previewNone: 'Este vídeo no tiene subtítulos ASS.', previewError: 'La vista previa falló.',
+                        original: 'ASS original', converted: 'SRT convertido', queued: '{n} vídeos añadidos a la cola.',
+                        Dialogue: 'diálogo', Sign: 'cartel', Song: 'canción', Top: 'arriba', Middle: 'medio', Bottom: 'abajo', Left: 'izquierda', Center: 'centro', Right: 'derecha',
+                        hideTitle: 'Pistas ASS originales', hide: 'Ocultar las pistas ASS convertidas (experimental)',
+                        hideHelp: 'Quita de los menús las pistas ASS que tienen una copia SRT. Los vídeos no se modifican: desmarca para mostrarlas de nuevo. Solo posible cuando las pistas ASS son las últimas del archivo.',
+                        namingTitle: 'Nombre de las pistas', trackTitle: 'Usar el nombre original de la pista', trackTitleHelp: '"FR Full [ASS] - Crunchyroll" pasa a "FR Full [SRT] - Crunchyroll". Jellyfin oculta los nombres que contienen "forced".',
+                        otherTitle: 'Otros', logActivity: 'Mostrar las conversiones en el registro de actividad de Jellyfin',
+                        cleanup: 'Borrar los SRT de los vídeos eliminados', cleanupHelp: 'Solo los SRT creados por este plugin.',
+                        save: 'Guardar', runNow: 'Guardar y convertir todo ahora', regenerate: 'Guardar y regenerar los SRT existentes',
+                        regenerateHelp: '«Regenerar» borra los SRT creados por este plugin en las bibliotecas marcadas y los vuelve a crear con estos ajustes. Tus propios SRT nunca se tocan.',
+                        started: 'Iniciado. Sigue el progreso en Panel > Tareas programadas.', failed: 'La acción falló.',
+                        confirmRegenerate: '¿Borrar los SRT creados por ASS to SRT y volver a crearlos con estos ajustes?'
+                    },
+                    de: {
+                        intro: 'Erstellt eine SRT-Kopie von ASS/SSA-Untertiteln, damit Apps, die kein ASS anzeigen können (Android TV, Fire TV, Roku...), das Video direkt abspielen, statt den Server die Untertitel einbrennen zu lassen. Die ASS-Spuren bleiben erhalten: es wird nur eine SRT hinzugefügt.',
+                        lastRun: 'Letzte vollständige Konvertierung: {date} — Bibliotheken: {libraries} — {checked} Videos geprüft, {converted} konvertiert ({created} SRT-Dateien), {errors} Fehler.',
+                        lastRunNever: 'Noch keine vollständige Konvertierung.', lastRunNoLibrary: 'keine',
+                        stats: '{srt} SRT-Dateien für {videos} Videos ({size}) — ASS ausgeblendet bei {hidden} Videos — {queued} wartend.',
+                        librariesTitle: 'Bibliotheken', librariesHelp: 'Wähle die Bibliotheken mit Videos, die ASS-Untertitel haben (meist dein Anime). Ohne Auswahl werden alle Videobibliotheken verarbeitet.',
+                        modeTitle: 'Konvertierungsmodus', mode: 'Modus', modeAll: 'Alles konvertieren (nächtliche Aufgabe und neue Videos)', modeUpcoming: 'Nur die nächsten Episoden vorbereiten',
+                        modeHelp: 'In beiden Modi werden beim Start einer Episode diese und die folgenden zuerst konvertiert.',
+                        upcomingCount: 'Im Voraus vorbereitete Episoden', upcomingHelp: 'Wie viele folgende Episoden beim Start einer Episode konvertiert werden.',
+                        auto: 'Neue Videos automatisch konvertieren', autoHelp: 'Modus „Alles konvertieren“: ein hinzugefügtes oder aktualisiertes Video wird etwa eine Minute später konvertiert.',
+                        perfTitle: 'Serverlast',
+                        playback: 'Während ein Video läuft', playbackSlow: 'Langsam konvertieren (empfohlen)', playbackPause: 'Bis zum Ende der Wiedergabe warten', playbackNormal: 'Nichts ändern',
+                        playbackHelp: 'Die Konvertierung liest die ganze Videodatei: langsamer zu lesen vermeidet Ruckler auf kleinen Servern oder Netzlaufwerken. Die Episoden, die du gleich schaust, werden nie pausiert, nur verlangsamt.',
+                        window: 'Hintergrund-Konvertierungen auf ein Zeitfenster begrenzen', windowHelp: 'Gilt für die nächtliche Aufgabe und neue Videos. Geschaute Episoden, angefragte Serien und die Schaltflächen unten sind nicht begrenzt.',
+                        windowStart: 'Von', windowEnd: 'Bis',
+                        tracksTitle: 'Zu konvertierende Untertitel',
+                        forced: 'Erzwungene Spuren konvertieren', forcedHelp: 'Erzwungene Spuren übersetzen nur fremdsprachige Stellen und Schilder. Sie werden zu ".forced.srt"-Dateien.',
+                        signs: '„Signs / Songs“-Spuren überspringen', signsHelp: 'Spuren, die nur Schilder und Lieder enthalten (nach ihrem Namen).',
+                        languages: 'Zu konvertierende Sprachen', languagesHelp: 'Durch Kommas getrennt, z. B. "de, en". Leer: alle Sprachen.',
+                        layoutTitle: 'Anordnung',
+                        overlap: 'Überlappende Untertitel verhindern', overlapHelp: 'Gleichzeitig in derselben Bildschirmzeile angezeigte Untertitel werden in einem Block gestapelt.',
+                        signsMode: 'Bildschirmtext (Schilder, Titel, Nachrichten)', signsTop: 'Oben im Bild', signsOriginal: 'An ihrer ursprünglichen Stelle (9 Positionen)', signsRemove: 'Entfernen',
+                        signsModeHelp: 'SRT kann dem Bild nicht folgen: übersetzte Schilder kommen standardmäßig nach oben, weg vom Dialog.',
+                        colorSigns: 'Bildschirmtext einfärben', signColor: 'Farbe',
+                        markSongs: 'Liedtexte mit ♪ markieren', songs: 'Liedtexte entfernen', songsHelp: 'Zeilen von Opening, Ending, Liedern und Karaoke.',
+                        styleTitle: 'Darstellung',
+                        italic: 'Kursiv behalten', bold: 'Fett behalten', underline: 'Unterstreichung behalten', colors: 'Textfarben behalten',
+                        positions: 'Positionen behalten', positionsHelp: 'Deaktiviert: alles unten in der Mitte.',
+                        singleLine: 'Zeilen eines Untertitels zusammenfügen', singleLineHelp: 'Dialogzeilen mit Bindestrich bleiben getrennt.',
+                        maxLine: 'Maximale Zeichen pro Zeile', maxLineHelp: 'Lange Zeilen werden in ausgewogene Zeilen geteilt. 0: Zeilen unverändert lassen.',
+                        minDuration: 'Minimale Anzeigedauer', minDurationOff: 'Originale Dauer', minDurationHelp: 'Sehr kurze Untertitel bleiben etwas länger, ohne den nächsten zu überlappen.',
+                        speakers: 'Namen der Figur anzeigen', speakersHelp: '„Hitori: ...“, wenn die Untertiteldatei den Namen enthält (häufig bei Fansubs).',
+                        previewTitle: 'Vorschau (Beispiel):',
+                        appearanceHelp: 'Umriss, Schatten, Schriftart, Größe und Hintergrund können nicht in einer SRT gespeichert werden: ändere sie in den Untertitel-Einstellungen deiner Jellyfin-App.',
+                        sample1: 'Live house Starry', sample2: 'Ich kann nicht glauben, dass wir', sample3: 'heute Abend auf der Bühne spielen...', sampleSong: 'Ich laufe zum Licht',
+                        realTitle: 'Vorschau und Konvertierung einer Serie', realHelp: 'Suche eine Serie, Episode oder einen Film: sieh dir die Konvertierung der ersten Minuten mit diesen Einstellungen an (nichts wird gespeichert) oder konvertiere sofort.',
+                        search: 'Suchen', previewBtn: 'Vorschau', convertBtn: 'Jetzt konvertieren',
+                        previewLoading: 'Untertitel werden gelesen (einige Sekunden)...', previewNone: 'Keine ASS-Untertitel in diesem Video.', previewError: 'Die Vorschau ist fehlgeschlagen.',
+                        original: 'Original-ASS', converted: 'Konvertierte SRT', queued: '{n} Videos zur Warteschlange hinzugefügt.',
+                        Dialogue: 'Dialog', Sign: 'Schild', Song: 'Lied', Top: 'oben', Middle: 'Mitte', Bottom: 'unten', Left: 'links', Center: 'Mitte', Right: 'rechts',
+                        hideTitle: 'Original-ASS-Spuren', hide: 'Konvertierte ASS-Spuren ausblenden (experimentell)',
+                        hideHelp: 'Entfernt ASS-Spuren mit SRT-Kopie aus den Untertitelmenüs. Videodateien werden nicht verändert: deaktivieren, um sie wieder anzuzeigen. Nur möglich, wenn die ASS-Spuren die letzten der Datei sind.',
+                        namingTitle: 'Spurname', trackTitle: 'Originalen Spurnamen verwenden', trackTitleHelp: '"FR Full [ASS] - Crunchyroll" wird zu "FR Full [SRT] - Crunchyroll". Jellyfin blendet Namen mit "forced" aus.',
+                        otherTitle: 'Sonstiges', logActivity: 'Konvertierungen im Jellyfin-Aktivitätsprotokoll melden',
+                        cleanup: 'SRT-Dateien entfernter Videos löschen', cleanupHelp: 'Nur die von diesem Plugin erstellten SRT-Dateien.',
+                        save: 'Speichern', runNow: 'Speichern und jetzt alles konvertieren', regenerate: 'Speichern und vorhandene SRT neu erstellen',
+                        regenerateHelp: '„Neu erstellen“ löscht die von diesem Plugin erstellten SRT-Dateien in den gewählten Bibliotheken und erstellt sie mit diesen Einstellungen neu. Eigene SRT-Dateien werden nie angefasst.',
+                        started: 'Gestartet. Fortschritt unter Dashboard > Geplante Aufgaben.', failed: 'Die Aktion ist fehlgeschlagen.',
+                        confirmRegenerate: 'Die von ASS to SRT erstellten SRT-Dateien löschen und mit diesen Einstellungen neu erstellen?'
+                    },
+                    pt: {
+                        intro: 'Cria uma cópia SRT das legendas ASS/SSA para que os apps que não exibem ASS (Android TV, Fire TV, Roku...) reproduzam o vídeo diretamente, em vez de pedir ao servidor para gravar as legendas na imagem. As faixas ASS são mantidas: apenas um SRT é adicionado.',
+                        lastRun: 'Última conversão completa: {date} — bibliotecas: {libraries} — {checked} vídeos verificados, {converted} convertidos ({created} arquivos SRT), {errors} erros.',
+                        lastRunNever: 'Nenhuma conversão completa ainda.', lastRunNoLibrary: 'nenhuma',
+                        stats: '{srt} arquivos SRT para {videos} vídeos ({size}) — ASS ocultos em {hidden} vídeos — {queued} na fila.',
+                        librariesTitle: 'Bibliotecas', librariesHelp: 'Marque as bibliotecas com vídeos que têm legendas ASS (geralmente seus animes). Sem marcar nada, todas as bibliotecas de vídeo são processadas.',
+                        modeTitle: 'Modo de conversão', mode: 'Modo', modeAll: 'Converter tudo (tarefa noturna e vídeos novos)', modeUpcoming: 'Preparar apenas os próximos episódios',
+                        modeHelp: 'Nos dois modos, ao iniciar um episódio, ele e os seguintes são convertidos primeiro.',
+                        upcomingCount: 'Episódios preparados com antecedência', upcomingHelp: 'Quantos episódios seguintes são convertidos ao iniciar um episódio.',
+                        auto: 'Converter vídeos novos automaticamente', autoHelp: 'Modo «Converter tudo»: um vídeo adicionado ou atualizado é convertido cerca de um minuto depois.',
+                        perfTitle: 'Carga do servidor',
+                        playback: 'Enquanto um vídeo é reproduzido', playbackSlow: 'Converter devagar (recomendado)', playbackPause: 'Esperar o fim da reprodução', playbackNormal: 'Não mudar nada',
+                        playbackHelp: 'Converter lê o arquivo de vídeo inteiro: ir devagar evita travamentos em servidores pequenos ou discos de rede. Os episódios que você vai assistir nunca são pausados, só desacelerados.',
+                        window: 'Limitar as conversões em segundo plano a um horário', windowHelp: 'Vale para a tarefa noturna e os vídeos novos. Episódios assistidos, séries pedidas e os botões abaixo não têm limite.',
+                        windowStart: 'Das', windowEnd: 'Às',
+                        tracksTitle: 'Legendas a converter',
+                        forced: 'Converter as faixas forçadas', forcedHelp: 'Faixas forçadas só traduzem falas em outro idioma e placas. Viram arquivos ".forced.srt".',
+                        signs: 'Ignorar faixas «Signs / Songs»', signsHelp: 'Faixas que só contêm placas e músicas (pelo nome).',
+                        languages: 'Idiomas a converter', languagesHelp: 'Separados por vírgulas, ex. "pt, en". Vazio: todos os idiomas.',
+                        layoutTitle: 'Layout',
+                        overlap: 'Evitar legendas sobrepostas', overlapHelp: 'Legendas exibidas ao mesmo tempo na mesma linha da tela são empilhadas em um único bloco.',
+                        signsMode: 'Texto na tela (placas, títulos, mensagens)', signsTop: 'No topo da tela', signsOriginal: 'No lugar original (9 posições)', signsRemove: 'Removê-los',
+                        signsModeHelp: 'O SRT não consegue acompanhar a imagem: por padrão, as placas traduzidas vão para o topo, longe dos diálogos.',
+                        colorSigns: 'Colorir o texto na tela', signColor: 'Cor',
+                        markSongs: 'Marcar letras de músicas com ♪', songs: 'Remover letras de músicas', songsHelp: 'Linhas do opening, ending, músicas e karaokê.',
+                        styleTitle: 'Aparência',
+                        italic: 'Manter o itálico', bold: 'Manter o negrito', underline: 'Manter o sublinhado', colors: 'Manter as cores do texto',
+                        positions: 'Manter as posições', positionsHelp: 'Desmarcado: tudo vai para baixo, no centro.',
+                        singleLine: 'Juntar as linhas de uma legenda', singleLineHelp: 'Falas que começam com travessão ficam separadas.',
+                        maxLine: 'Máximo de caracteres por linha', maxLineHelp: 'Linhas longas são divididas em linhas equilibradas. 0: manter as linhas.',
+                        minDuration: 'Tempo mínimo na tela', minDurationOff: 'Tempo original', minDurationHelp: 'Legendas muito curtas ficam um pouco mais, sem invadir a seguinte.',
+                        speakers: 'Mostrar o nome do personagem', speakersHelp: '«Hitori: ...» quando o arquivo indica o nome (comum em fansubs).',
+                        previewTitle: 'Prévia (exemplo):',
+                        appearanceHelp: 'Contorno, sombra, fonte, tamanho e fundo não podem ser salvos em um SRT: altere-os nas configurações de legenda do seu app Jellyfin.',
+                        sample1: 'Live house Starry', sample2: 'Não acredito que hoje à noite', sample3: 'vamos tocar no palco...', sampleSong: 'Eu corro em direção à luz',
+                        realTitle: 'Prévia e conversão de uma série', realHelp: 'Procure uma série, um episódio ou um filme: veja a conversão dos primeiros minutos com estas configurações (nada é salvo), ou converta agora.',
+                        search: 'Pesquisar', previewBtn: 'Prévia', convertBtn: 'Converter agora',
+                        previewLoading: 'Lendo as legendas (alguns segundos)...', previewNone: 'Nenhuma legenda ASS neste vídeo.', previewError: 'A prévia falhou.',
+                        original: 'ASS original', converted: 'SRT convertido', queued: '{n} vídeos adicionados à fila.',
+                        Dialogue: 'diálogo', Sign: 'placa', Song: 'música', Top: 'topo', Middle: 'meio', Bottom: 'baixo', Left: 'esquerda', Center: 'centro', Right: 'direita',
+                        hideTitle: 'Faixas ASS originais', hide: 'Ocultar as faixas ASS convertidas (experimental)',
+                        hideHelp: 'Remove dos menus as faixas ASS que têm uma cópia SRT. Os vídeos não são modificados: desmarque para mostrá-las de novo. Só é possível quando as faixas ASS são as últimas do arquivo.',
+                        namingTitle: 'Nome das faixas', trackTitle: 'Usar o nome original da faixa', trackTitleHelp: '"FR Full [ASS] - Crunchyroll" vira "FR Full [SRT] - Crunchyroll". O Jellyfin oculta nomes que contêm "forced".',
+                        otherTitle: 'Outros', logActivity: 'Mostrar as conversões no registro de atividades do Jellyfin',
+                        cleanup: 'Apagar os SRT dos vídeos removidos', cleanupHelp: 'Somente os SRT criados por este plugin.',
+                        save: 'Salvar', runNow: 'Salvar e converter tudo agora', regenerate: 'Salvar e recriar os SRT existentes',
+                        regenerateHelp: '«Recriar» apaga os SRT criados por este plugin nas bibliotecas marcadas e os cria de novo com estas configurações. Seus próprios SRT nunca são tocados.',
+                        started: 'Iniciado. Acompanhe em Painel > Tarefas agendadas.', failed: 'A ação falhou.',
+                        confirmRegenerate: 'Apagar os SRT criados pelo ASS to SRT e criá-los de novo com estas configurações?'
+                    },
+                    it: {
+                        intro: 'Crea una copia SRT dei sottotitoli ASS/SSA così che le app che non mostrano l\'ASS (Android TV, Fire TV, Roku...) riproducano il video direttamente, invece di chiedere al server di imprimere i sottotitoli. Le tracce ASS restano: viene solo aggiunto un SRT.',
+                        lastRun: 'Ultima conversione completa: {date} — librerie: {libraries} — {checked} video controllati, {converted} convertiti ({created} file SRT), {errors} errori.',
+                        lastRunNever: 'Nessuna conversione completa per ora.', lastRunNoLibrary: 'nessuna',
+                        stats: '{srt} file SRT per {videos} video ({size}) — ASS nascosti per {hidden} video — {queued} in attesa.',
+                        librariesTitle: 'Librerie', librariesHelp: 'Seleziona le librerie con video che hanno sottotitoli ASS (di solito i tuoi anime). Senza selezione vengono elaborate tutte le librerie video.',
+                        modeTitle: 'Modalità di conversione', mode: 'Modalità', modeAll: 'Convertire tutto (attività notturna e nuovi video)', modeUpcoming: 'Preparare solo i prossimi episodi',
+                        modeHelp: 'In entrambe le modalità, quando avvii un episodio, questo e i successivi vengono convertiti per primi.',
+                        upcomingCount: 'Episodi preparati in anticipo', upcomingHelp: 'Quanti episodi successivi vengono convertiti quando avvii un episodio.',
+                        auto: 'Convertire automaticamente i nuovi video', autoHelp: 'Modalità «Convertire tutto»: un video aggiunto o aggiornato viene convertito circa un minuto dopo.',
+                        perfTitle: 'Carico del server',
+                        playback: 'Durante la riproduzione di un video', playbackSlow: 'Convertire lentamente (consigliato)', playbackPause: 'Attendere la fine della riproduzione', playbackNormal: 'Non cambiare nulla',
+                        playbackHelp: 'La conversione legge tutto il file video: rallentare evita scatti su server piccoli o dischi di rete. Gli episodi che stai per guardare non vengono mai messi in pausa, solo rallentati.',
+                        window: 'Limitare le conversioni in background a una fascia oraria', windowHelp: 'Vale per l\'attività notturna e i nuovi video. Episodi guardati, serie richieste e i pulsanti sotto non hanno limiti.',
+                        windowStart: 'Dalle', windowEnd: 'Alle',
+                        tracksTitle: 'Sottotitoli da convertire',
+                        forced: 'Convertire le tracce forzate', forcedHelp: 'Le tracce forzate traducono solo le frasi in lingua straniera e i cartelli. Diventano file ".forced.srt".',
+                        signs: 'Ignorare le tracce «Signs / Songs»', signsHelp: 'Tracce che contengono solo cartelli e canzoni (dal nome).',
+                        languages: 'Lingue da convertire', languagesHelp: 'Separate da virgole, es. "it, en". Vuoto: tutte le lingue.',
+                        layoutTitle: 'Disposizione',
+                        overlap: 'Evitare sottotitoli sovrapposti', overlapHelp: 'I sottotitoli mostrati insieme sulla stessa riga dello schermo vengono impilati in un unico blocco.',
+                        signsMode: 'Testo a schermo (cartelli, titoli, messaggi)', signsTop: 'In alto', signsOriginal: 'Al loro posto originale (9 posizioni)', signsRemove: 'Rimuoverli',
+                        signsModeHelp: 'L\'SRT non può seguire l\'immagine: per impostazione predefinita i cartelli tradotti vanno in alto, lontano dai dialoghi.',
+                        colorSigns: 'Colorare il testo a schermo', signColor: 'Colore',
+                        markSongs: 'Segnare i testi delle canzoni con ♪', songs: 'Rimuovere i testi delle canzoni', songsHelp: 'Righe di opening, ending, canzoni e karaoke.',
+                        styleTitle: 'Aspetto',
+                        italic: 'Mantenere il corsivo', bold: 'Mantenere il grassetto', underline: 'Mantenere la sottolineatura', colors: 'Mantenere i colori del testo',
+                        positions: 'Mantenere le posizioni', positionsHelp: 'Deselezionato: tutto in basso al centro.',
+                        singleLine: 'Unire le righe di un sottotitolo', singleLineHelp: 'Le battute che iniziano con un trattino restano separate.',
+                        maxLine: 'Caratteri massimi per riga', maxLineHelp: 'Le righe lunghe vengono divise in righe equilibrate. 0: lasciare le righe come sono.',
+                        minDuration: 'Durata minima a schermo', minDurationOff: 'Durata originale', minDurationHelp: 'I sottotitoli molto brevi restano un po\' di più, senza invadere il successivo.',
+                        speakers: 'Mostrare il nome del personaggio', speakersHelp: '«Hitori: ...» quando il file indica il nome (frequente nei fansub).',
+                        previewTitle: 'Anteprima (esempio):',
+                        appearanceHelp: 'Contorno, ombra, carattere, dimensione e sfondo non possono essere salvati in un SRT: modificali nelle impostazioni dei sottotitoli della tua app Jellyfin.',
+                        sample1: 'Live house Starry', sample2: 'Non ci credo che stasera', sample3: 'suoneremo sul palco...', sampleSong: 'Corro verso la luce',
+                        realTitle: 'Anteprima e conversione di una serie', realHelp: 'Cerca una serie, un episodio o un film: guarda la conversione dei primi minuti con queste impostazioni (nulla viene salvato), oppure convertilo subito.',
+                        search: 'Cerca', previewBtn: 'Anteprima', convertBtn: 'Converti ora',
+                        previewLoading: 'Lettura dei sottotitoli (qualche secondo)...', previewNone: 'Nessun sottotitolo ASS in questo video.', previewError: 'L\'anteprima non è riuscita.',
+                        original: 'ASS originale', converted: 'SRT convertito', queued: '{n} video aggiunti alla coda.',
+                        Dialogue: 'dialogo', Sign: 'cartello', Song: 'canzone', Top: 'alto', Middle: 'centro', Bottom: 'basso', Left: 'sinistra', Center: 'centro', Right: 'destra',
+                        hideTitle: 'Tracce ASS originali', hide: 'Nascondere le tracce ASS convertite (sperimentale)',
+                        hideHelp: 'Rimuove dai menu le tracce ASS che hanno una copia SRT. I video non vengono modificati: deseleziona per mostrarle di nuovo. Possibile solo se le tracce ASS sono le ultime del file.',
+                        namingTitle: 'Nome delle tracce', trackTitle: 'Usare il nome originale della traccia', trackTitleHelp: '"FR Full [ASS] - Crunchyroll" diventa "FR Full [SRT] - Crunchyroll". Jellyfin nasconde i nomi che contengono "forced".',
+                        otherTitle: 'Altro', logActivity: 'Segnalare le conversioni nel registro attività di Jellyfin',
+                        cleanup: 'Eliminare gli SRT dei video rimossi', cleanupHelp: 'Solo gli SRT creati da questo plugin.',
+                        save: 'Salva', runNow: 'Salva e converti tutto ora', regenerate: 'Salva e rigenera gli SRT esistenti',
+                        regenerateHelp: '«Rigenera» elimina gli SRT creati da questo plugin nelle librerie selezionate e li ricrea con queste impostazioni. I tuoi SRT non vengono mai toccati.',
+                        started: 'Avviato. Segui l\'avanzamento in Dashboard > Attività pianificate.', failed: 'L\'azione non è riuscita.',
+                        confirmRegenerate: 'Eliminare gli SRT creati da ASS to SRT e ricrearli con queste impostazioni?'
                     }
                 };
-                var lang = ((document.documentElement.lang || navigator.language || 'en').toLowerCase().indexOf('fr') === 0) ? 'fr' : 'en';
+                var lang = (document.documentElement.lang || navigator.language || 'en').toLowerCase().split('-')[0];
+                if (!texts[lang]) { lang = 'en'; }
                 var t = texts[lang];
 
-                function translate() {
-                    page.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t[el.getAttribute('data-t')]; });
-                    page.querySelectorAll('[data-tlabel]').forEach(function (el) { el.setAttribute('label', t[el.getAttribute('data-tlabel')]); });
+                function format(text, values) {
+                    return text.replace(/\{(\w+)\}/g, function (m, key) { return values[key] !== undefined ? values[key] : m; });
                 }
 
                 function escapeHtml(text) {
@@ -246,27 +535,58 @@
                     return div.innerHTML;
                 }
 
-                // Mirrors what the plugin keeps, on a typical anime subtitle.
+                // Shows SRT formatting (<i>, <b>, <u>, <font color>) without allowing anything else.
+                function srtToHtml(line) {
+                    return escapeHtml(line)
+                        .replace(/&lt;(\/?)(i|b|u)&gt;/g, '<$1$2>')
+                        .replace(/&lt;font color="(#[0-9a-fA-F]{6})"&gt;/g, '<span style="color:$1">')
+                        .replace(/&lt;\/font&gt;/g, '</span>');
+                }
+
+                function time(ms) {
+                    var s = Math.floor(ms / 1000);
+                    return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+                }
+
+                function translate() {
+                    page.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t[el.getAttribute('data-t')]; });
+                    page.querySelectorAll('[data-tlabel]').forEach(function (el) { el.setAttribute('label', t[el.getAttribute('data-tlabel')]); });
+                    var hours = '';
+                    for (var h = 0; h < 24; h++) { hours += '<option value="' + h + '">' + ('0' + h).slice(-2) + ':00</option>'; }
+                    page.querySelectorAll('.atsHour').forEach(function (el) { el.innerHTML = hours; });
+                }
+
+                function value(id) {
+                    var el = page.querySelector('#' + id);
+                    return el.type === 'checkbox' ? el.checked : el.value;
+                }
+
                 function renderPreview() {
-                    var o = function (id) { return page.querySelector('#' + id).checked; };
+                    var o = function (id) { return value(id); };
                     var line1 = escapeHtml(t.sample2);
                     var line2 = escapeHtml(t.sample3);
                     if (o('KeepColors')) { line1 = '<span style="color:#ffd84d">' + line1 + '</span>'; }
                     if (o('KeepUnderline')) { line2 = '<u>' + line2 + '</u>'; }
                     var text = line1 + (o('SingleLine') ? ' ' : '<br>') + line2;
-                    var sign = escapeHtml(t.sample1.toUpperCase());
                     if (o('KeepItalic')) { text = '<i>' + text + '</i>'; }
-                    if (o('KeepBold')) { text = '<b>' + text + '</b>'; sign = '<b>' + sign + '</b>'; }
-                    var signsMode = page.querySelector('#SignsMode').value;
+                    if (o('KeepBold')) { text = '<b>' + text + '</b>'; }
+                    var sign = escapeHtml(t.sample1.toUpperCase());
+                    if (o('ColorSigns')) { sign = '<span style="color:' + o('SignColor') + '">' + sign + '</span>'; }
+                    var song = '';
+                    if (!o('RemoveSongs')) {
+                        song = escapeHtml(t.sampleSong);
+                        if (o('MarkSongs')) { song = '♪ ' + song + ' ♪'; if (o('KeepItalic')) { song = '<i>' + song + '</i>'; } }
+                        song = '<div style="margin-top:.6em;opacity:.9">' + song + '</div>';
+                    }
                     var top = '';
-                    if (signsMode !== 'Remove') {
+                    if (o('SignsMode') !== 'Remove') {
                         if (o('KeepPositions')) {
-                            top = '<div style="margin-bottom:1.5em;opacity:.85">' + sign + ' <small>(' + (lang === 'fr' ? 'en haut' : 'top') + ')</small></div>';
+                            top = '<div style="margin-bottom:1.5em">' + sign + '</div>';
                         } else {
                             text = sign + '<br>' + text;
                         }
                     }
-                    page.querySelector('#AssToSrtPreview').innerHTML = top + '<div>' + text + '</div>';
+                    page.querySelector('#AssToSrtPreview').innerHTML = top + '<div>' + text + '</div>' + song;
                 }
 
                 function renderLastRun(config) {
@@ -276,15 +596,20 @@
                         return;
                     }
 
-                    var values = {
-                        date: new Date(config.LastRunUtc).toLocaleString(lang === 'fr' ? 'fr-FR' : undefined),
+                    el.textContent = format(t.lastRun, {
+                        date: new Date(config.LastRunUtc).toLocaleString(lang),
                         libraries: config.LastRunLibraries || t.lastRunNoLibrary,
-                        checked: config.LastRunChecked,
-                        converted: config.LastRunConverted,
-                        created: config.LastRunCreated,
-                        errors: config.LastRunErrors
-                    };
-                    el.textContent = t.lastRun.replace(/\{(\w+)\}/g, function (m, key) { return values[key]; });
+                        checked: config.LastRunChecked, converted: config.LastRunConverted,
+                        created: config.LastRunCreated, errors: config.LastRunErrors
+                    });
+                }
+
+                function renderStats() {
+                    ApiClient.getJSON(ApiClient.getUrl('AssToSrt/Stats')).then(function (s) {
+                        var size = s.SizeBytes > 1048576 ? (s.SizeBytes / 1048576).toFixed(1) + ' Mo' : Math.round(s.SizeBytes / 1024) + ' Ko';
+                        if (lang !== 'fr') { size = size.replace('Mo', 'MB').replace('Ko', 'KB'); }
+                        page.querySelector('#AssToSrtStats').textContent = format(t.stats, { srt: s.SrtFiles, videos: s.Videos, size: size, hidden: s.HiddenVideos, queued: s.Queued });
+                    }).catch(function () { page.querySelector('#AssToSrtStats').style.display = 'none'; });
                 }
 
                 function renderLibraries(folders, selected) {
@@ -297,33 +622,87 @@
                         }).join('');
                 }
 
+                function readForm(config) {
+                    checkboxes.forEach(function (id) { config[id] = page.querySelector('#' + id).checked; });
+                    selects.forEach(function (id) { config[id] = page.querySelector('#' + id).value; });
+                    ['WindowStartHour', 'WindowEndHour', 'MinDurationMs'].forEach(function (id) { config[id] = parseInt(config[id], 10) || 0; });
+                    numbers.forEach(function (id) { config[id] = Math.max(0, parseInt(page.querySelector('#' + id).value, 10) || 0); });
+                    config.Languages = page.querySelector('#Languages').value.trim();
+                    config.SignColor = page.querySelector('#SignColor').value;
+                    config.LibraryIds = Array.prototype.map.call(page.querySelectorAll('.assToSrtLibrary:checked'), function (el) { return el.getAttribute('data-id'); });
+                    return config;
+                }
+
                 function save() {
                     Dashboard.showLoadingMsg();
                     return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                        checkboxes.forEach(function (id) { config[id] = page.querySelector('#' + id).checked; });
-                        config.Languages = page.querySelector('#Languages').value.trim();
-                        config.SignsMode = page.querySelector('#SignsMode').value;
-                        config.LibraryIds = Array.prototype.map.call(
-                            page.querySelectorAll('.assToSrtLibrary:checked'),
-                            function (el) { return el.getAttribute('data-id'); });
-                        return ApiClient.updatePluginConfiguration(pluginId, config);
+                        return ApiClient.updatePluginConfiguration(pluginId, readForm(config));
                     });
                 }
 
-                function runTask(key) {
-                    return save().then(function () {
-                        return ApiClient.getJSON(ApiClient.getUrl('ScheduledTasks', { isHidden: false }));
-                    }).then(function (tasks) {
-                        var task = tasks.filter(function (x) { return x.Key === key; })[0];
-                        if (!task) { throw new Error('task not found'); }
-                        return ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('ScheduledTasks/Running/' + task.Id) });
-                    }).then(function () {
+                function post(path, data) {
+                    return ApiClient.ajax({
+                        type: 'POST',
+                        url: ApiClient.getUrl(path),
+                        data: data ? JSON.stringify(data) : undefined,
+                        contentType: 'application/json',
+                        dataType: data ? 'json' : undefined
+                    });
+                }
+
+                function action(path) {
+                    save().then(function () { return post(path); }).then(function () {
                         Dashboard.hideLoadingMsg();
                         Dashboard.alert(t.started);
                     }).catch(function () {
                         Dashboard.hideLoadingMsg();
                         Dashboard.alert(t.failed);
                     });
+                }
+
+                // --- Real preview and series conversion ---
+                var searchTimer = null;
+                function search(term) {
+                    var results = page.querySelector('#AssToSrtResults');
+                    if (term.length < 2) { results.innerHTML = ''; return; }
+                    ApiClient.getItems(ApiClient.getCurrentUserId(), { searchTerm: term, IncludeItemTypes: 'Series,Movie,Episode', Recursive: true, Limit: 12 }).then(function (r) {
+                        results.innerHTML = r.Items.map(function (i) {
+                            var label = i.Type === 'Episode' ? (i.SeriesName + ' — ' + (i.ParentIndexNumber ? 'S' + i.ParentIndexNumber : '') + 'E' + (i.IndexNumber || '?') + ' ' + i.Name) : i.Name + (i.ProductionYear ? ' (' + i.ProductionYear + ')' : '');
+                            return '<button is="emby-button" type="button" class="raised emby-button atsResult" data-id="' + i.Id + '" data-type="' + i.Type + '">' + escapeHtml(label) + '</button>';
+                        }).join('');
+                    });
+                }
+
+                function selectItem(id, type, label) {
+                    selectedItem = { id: id, type: type };
+                    var box = page.querySelector('#AssToSrtSelected');
+                    box.style.display = '';
+                    box.textContent = label;
+                    page.querySelector('#AssToSrtPreviewBtn').disabled = false;
+                    page.querySelector('#AssToSrtConvertBtn').disabled = false;
+                    page.querySelector('#AssToSrtResults').innerHTML = '';
+                }
+
+                function previewVideoId() {
+                    if (selectedItem.type !== 'Series') { return Promise.resolve(selectedItem.id); }
+                    return ApiClient.getJSON(ApiClient.getUrl('Shows/' + selectedItem.id + '/Episodes', { userId: ApiClient.getCurrentUserId(), Limit: 1 })).then(function (r) {
+                        return r.Items.length ? r.Items[0].Id : selectedItem.id;
+                    });
+                }
+
+                function renderRealPreview(tracks) {
+                    var label = function (row, column) { return t[row] + (column !== 'Center' ? ' ' + t[column] : ''); };
+                    page.querySelector('#AssToSrtRealPreview').innerHTML = tracks.map(function (track) {
+                        var original = track.Original.map(function (l) {
+                            return '<div class="ats-item"><span class="ats-time">' + time(l.Start) + '</span><span class="ats-tag">' + t[l.Kind] + '</span><span class="ats-tag">' + label(l.Row, l.Column) + '</span>' + escapeHtml(l.Text) + '</div>';
+                        }).join('');
+                        var converted = track.Converted.map(function (c) {
+                            return '<div class="ats-item"><span class="ats-time">' + time(c.Start) + '–' + time(c.End) + '</span><span class="ats-tag">' + label(c.Row, c.Column) + '</span>'
+                                + '<div class="ats-cue" style="text-align:' + (c.Column === 'Left' ? 'left' : c.Column === 'Right' ? 'right' : 'center') + '">' + c.Lines.map(srtToHtml).join('<br>') + '</div></div>';
+                        }).join('');
+                        return '<h4>' + escapeHtml(track.Title) + '</h4><div class="ats-cols"><div><b>' + t.original + '</b><div class="ats-list">' + original + '</div></div>'
+                            + '<div><b>' + t.converted + '</b><div class="ats-list">' + converted + '</div></div></div>';
+                    }).join('');
                 }
 
                 translate();
@@ -333,16 +712,58 @@
                     Promise.all([ApiClient.getPluginConfiguration(pluginId), ApiClient.getVirtualFolders()]).then(function (results) {
                         var config = results[0];
                         checkboxes.forEach(function (id) { page.querySelector('#' + id).checked = !!config[id]; });
+                        selects.forEach(function (id) { if (config[id] !== undefined && config[id] !== null) { page.querySelector('#' + id).value = String(config[id]); } });
+                        numbers.forEach(function (id) { page.querySelector('#' + id).value = config[id]; });
                         page.querySelector('#Languages').value = config.Languages || '';
-                        page.querySelector('#SignsMode').value = config.SignsMode || 'Top';
+                        page.querySelector('#SignColor').value = config.SignColor || '#ffe066';
                         renderLibraries(results[1], config.LibraryIds || []);
                         renderLastRun(config);
+                        renderStats();
                         renderPreview();
                         Dashboard.hideLoadingMsg();
                     });
                 });
 
-                page.querySelectorAll('.assToSrtStyle').forEach(function (el) { el.addEventListener('change', renderPreview); });
+                page.querySelectorAll('.atsStyle').forEach(function (el) {
+                    el.addEventListener('change', renderPreview);
+                    el.addEventListener('input', renderPreview);
+                });
+
+                page.querySelector('#AssToSrtSearch').addEventListener('input', function (e) {
+                    clearTimeout(searchTimer);
+                    var term = e.target.value.trim();
+                    searchTimer = setTimeout(function () { search(term); }, 300);
+                });
+
+                page.querySelector('#AssToSrtResults').addEventListener('click', function (e) {
+                    var button = e.target.closest('.atsResult');
+                    if (button) { selectItem(button.getAttribute('data-id'), button.getAttribute('data-type'), button.textContent); }
+                });
+
+                page.querySelector('#AssToSrtPreviewBtn').addEventListener('click', function () {
+                    var target = page.querySelector('#AssToSrtRealPreview');
+                    target.textContent = t.previewLoading;
+                    previewVideoId().then(function (id) {
+                        return post('AssToSrt/Preview', { ItemId: id, Settings: readForm({}) });
+                    }).then(function (tracks) {
+                        renderRealPreview(tracks);
+                    }).catch(function (e) {
+                        target.textContent = e && e.status === 404 ? t.previewNone : t.previewError;
+                    });
+                });
+
+                page.querySelector('#AssToSrtConvertBtn').addEventListener('click', function () {
+                    save().then(function () {
+                        return post('AssToSrt/Convert/' + selectedItem.id, {});
+                    }).then(function (count) {
+                        Dashboard.hideLoadingMsg();
+                        Dashboard.alert(format(t.queued, { n: count }));
+                        renderStats();
+                    }).catch(function () {
+                        Dashboard.hideLoadingMsg();
+                        Dashboard.alert(t.failed);
+                    });
+                });
 
                 page.querySelector('#AssToSrtConfigForm').addEventListener('submit', function (e) {
                     e.preventDefault();
@@ -350,10 +771,10 @@
                     return false;
                 });
 
-                page.querySelector('#AssToSrtRunNow').addEventListener('click', function () { runTask('AssToSrtConvert'); });
+                page.querySelector('#AssToSrtRunNow').addEventListener('click', function () { action('AssToSrt/ConvertAll'); });
 
                 page.querySelector('#AssToSrtRegenerate').addEventListener('click', function () {
-                    if (window.confirm(t.confirmRegenerate)) { runTask('AssToSrtRegenerate'); }
+                    if (window.confirm(t.confirmRegenerate)) { action('AssToSrt/Regenerate'); }
                 });
             })();
         </script>

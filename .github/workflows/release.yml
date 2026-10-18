@@ -60,6 +60,7 @@ jobs:
           SOURCE_URL: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ steps.version.outputs.zip }}
           CHANGELOG: ${{ github.event.release.body }}
           OWNER: ${{ github.repository_owner }}
+          IMAGE_URL: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.repository.default_branch }}/images/logo.png
         run: |
           python3 - <<'EOF'
           import json, os, datetime
@@ -80,6 +81,9 @@ jobs:
                   "versions": [],
               }
               manifest.append(plugin)
+
+          # Logo shown in the Jellyfin catalog.
+          plugin["imageUrl"] = os.environ["IMAGE_URL"]
 
           plugin["versions"] = [v for v in plugin["versions"] if v["version"] != os.environ["VERSION"]]
           plugin["versions"].insert(0, {
